@@ -1,0 +1,21 @@
+=================
+= IMPORTANT
+=================
+
+This directory contains two transformation-files, which are largely identical:
+- transform.nb.foto.v03-S.vit.xsl : transforms all Photographs of the Schwarzenbach-collection with a digitzed image that was actually shot by Annemarie Schwarzenbach.
+- transform.nb.foto.v03.vit.xsl : transforms all other picture-collections of HelveticArchives
+
+
+
+===============================
+= transform.nb.foto.v03.vit.xsl
+===============================
+The different collections and the assigned copyright-status can be defined by adding two variables to the xsl while processing it:
+
+- institutioncode
+- rights949z
+
+Both have a hardcoded fallback-code in the xsl-file
+
+TVi/20150604
