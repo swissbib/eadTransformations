@@ -32,7 +32,7 @@
     <!-- Vorschaulinks auf helveticarchives -->
     <xsl:variable name="linkurl949y" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=80'" />
     <xsl:variable name="linkurl856ansichtsbild" select="'http://www.helveticarchives.ch/bild.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=10'" />
-    <xsl:variable name="linkurl950vorschaubild" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=10'" />
+    <xsl:variable name="linkurl956vorschaubild" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=10'" />
     
     
     <!-- Option zum GLOBALEN Übersteuern des Reproduktionsstatus
@@ -296,14 +296,16 @@
         <xsl:if test="not(../../UsageData/Accessability/text() = 'Sonderbewilligung Intranet')">
             
             <xsl:variable name="recordid" select="../.././@Id"/>
-            <xsl:variable name="replacedurl" select="fn:replace($linkurl950vorschaubild,'XXX',$recordid)"/>
-            <marc:datafield tag="950" ind1=" " ind2=" ">
+            <xsl:variable name="replacedurl" select="fn:replace($linkurl956vorschaubild,'XXX',$recordid)"/>
+            <marc:datafield tag="956" ind1="4" ind2=" ">
                 <marc:subfield code="B">CHARCH</marc:subfield>
-                <marc:subfield code="E">42</marc:subfield>
-                <marc:subfield code="P">856</marc:subfield>
-                <marc:subfield code="3">Vorschaubild</marc:subfield>
+                <marc:subfield code="a"><xsl:value-of select="$institutioncode"/></marc:subfield>
                 <marc:subfield code="u"><xsl:value-of select="$replacedurl"/></marc:subfield>
+                <marc:subfield code="q">bild</marc:subfield>
+                <marc:subfield code="x">THUMBNAIL</marc:subfield>
+                <marc:subfield code="y">Vorschaubild</marc:subfield>
             </marc:datafield>
+            
         </xsl:if>
 
     </xsl:template>

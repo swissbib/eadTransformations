@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-    xmlns:fn="http://www.w3.org/2005/xpath-functions"    
+    xmlns:fn="http://www.w3.org/2005/xpath-functions"
      version="2.0"
      xmlns:marc="http://www.loc.gov/MARC21/slim">
     
@@ -10,31 +10,32 @@
         />
     
     <!-- ***************************************
-         * Scope-Formular: PHOTOGRAPHIE
-         * nicht für Bilder verwenden
+         * Scope-Formular: BILD
+         * nicht für Fotos verwenden
          ***************************************
     -->
-
+    
     <!-- =======================================
          Sektion für allgemeine Codes 
          =======================================
     -->
+    
+    <!-- Base URL (aktuell nicht in Gebrauch) -->
     <xsl:param name="hostname" select="'http://www.nb.admin.ch/'" />
     
-    <!-- institutioncode is needed by swissbib:
+    <!-- Sammlungscode für swissbib (muss mit swissbib abgesprochen werden)
      CHARCH01: Graphische Sammlung - EAD
-     CHARCH02: SLA (aktuell nur Fotos Annemarie Schwarzenbach)
+     CHARCH02: Schweizerisches Literatur Archiv (aktuell nur Fotos Annemarie Schwarzenbach)
      CHARCH03: Graphische Sammlung - Sammlung Guggelmann
     -->
-    <xsl:param name="institutioncode" select="'CHARCH01'" />
+    <xsl:param name="institutioncode" select="'CHARCH03'" />
     
     
     <!-- Vorschaulinks auf helveticarchives -->
-    <xsl:variable name="linkurl949y" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=80'" />
+    <xsl:variable name="linkurl949y" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=80'"/>
     <xsl:variable name="linkurl856ansichtsbild" select="'http://www.helveticarchives.ch/bild.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=10'" />
     <xsl:variable name="linkurl956vorschaubild" select="'http://www.helveticarchives.ch/getimage.aspx?VEID=XXX&amp;DEID=10&amp;SQNZNR=1&amp;SIZE=10'" />
-    
-    
+   
     <!-- Option zum GLOBALEN Übersteuern des Reproduktionsstatus
         Standard: Reproduktionsbewilligung
         Denkbare Optionen: 
@@ -43,13 +44,11 @@
     -->
     <xsl:param name="rights949z" select="'Reproduktionsbewilligung'" />
 
-
     <!-- =======================================
          Sektion für die Sammlungsstruktur der marc:records 
          =======================================
     -->
     <xsl:template match="/">
-
         <marc:collection >
             <!-- start processing of record nodes -->
             <xsl:apply-templates/>
@@ -69,7 +68,7 @@
              - data type (by validating the "edit form")
              - presence of a digital resource
         -->
-        <xsl:if test="((@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Fotografie'))
+        <xsl:if test="((@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik'))
             and DetailData/DataElement[@ElementName='Ansichtsbild']"> 
 
             <marc:record >
@@ -95,35 +94,19 @@
                         <xsl:apply-templates select="DetailData/DataElement[@ElementName='Entstehungszeitraum'] | 
                             DetailData/DataElement[@ElementName='Vertrieb/Verlag'] | 
                             DetailData/DataElement[@ElementName='Partnerangaben Verlag/Vertrieb']" mode="feld260"/>
-                    </marc:datafield>  
-    
-                    <marc:datafield tag="300" ind2=" " ind1=" " >
-                        <xsl:apply-templates select="DetailData/DataElement[@ElementName='Archivalienart'] | 
-                            DetailData/DataElement[@ElementName='Farbe'] | 
-                            DetailData/DataElement[@ElementName='Standard Bildformat']" mode="feld300"/>
-                    </marc:datafield>  
-                    
-                    <!--  
-                    swissbib specific as format filter
-                    necessary for NB?
-                    -->
-                    
-                    <!--
-                    <marc:datafield tag="830" ind2=" " ind1="0" >
-                        <marc:subfield code="w"><xsl:value-of select="$levelID[fn:count($levelID)]/@Id"/></marc:subfield>
-                    </marc:datafield>  
-                    -->
-                        <!-- VM020453 = Foto (online) und der dazu gehörende allg. Filtercode XM020400-->
+                    </marc:datafield>
+
+                        <!-- VM020353 = Bild (online) und der dazu gehörende allg. Filtercode XM020000 -->
                     <marc:datafield tag="898" ind2=" " ind1=" " >
-                        <marc:subfield code="a"><xsl:text>VM020453</xsl:text></marc:subfield>
-                        <marc:subfield code="b"><xsl:text>XM020400</xsl:text></marc:subfield>
+                        <marc:subfield code="a"><xsl:text>VM020353</xsl:text></marc:subfield>
+                        <marc:subfield code="b"><xsl:text>XM020000</xsl:text></marc:subfield>
                     </marc:datafield>  
                     
                 </xsl:variable>
     
                 <xsl:for-each select="$datafields/marc:datafield">
                     <xsl:sort select="./@tag"/> 
-                    <xsl:copy-of select="."/> 
+                    <xsl:copy-of select="."/>
                 </xsl:for-each>
             </marc:record>
         </xsl:if>
@@ -132,22 +115,20 @@
         <xsl:apply-templates select="Record"/>
     </xsl:template>
     
+
     <!-- =======================================
          Sektion zur Erstellung der marc:Datenstruktur 
          =======================================
     -->
-    
+
     <xsl:template match="DetailData">
         <xsl:apply-templates/>
-                
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Signatur']">
-
         <xsl:variable name="recordid" select="../.././@Id"/>
         <xsl:variable name="replacedurl" select="fn:replace($linkurl949y,'XXX',$recordid)"/>
-            
-        
+
         <marc:datafield tag="949" ind2=" " ind1=" " >
             <marc:subfield code="B"><xsl:text>CHARCH</xsl:text></marc:subfield>
             <marc:subfield code="F"><xsl:value-of select="$institutioncode"/></marc:subfield>
@@ -158,23 +139,21 @@
             <marc:subfield code="j"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
             <marc:subfield code="z"><xsl:value-of select="$rights949z" /></marc:subfield>
         </marc:datafield>
-    
     </xsl:template>
+
     <xsl:template match="DataElement[@ElementName='Signatur Archivplan']">
-<!-- obsolete ??? --> 
+        <!-- obsolete ??? --> 
     </xsl:template>
-        
+
     <xsl:template match="DataElement[@ElementName='Dateiname Digitalisat']">
-<!-- obsolete ??? -->
+        <!-- obsolete ??? -->
     </xsl:template>
 
     <xsl:template match="DataElement[@ElementName='Titel / Name']">
-        
         <marc:datafield tag="245" ind1="0" ind2="0" >
             <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
             <marc:subfield code="h">[Bild]</marc:subfield>
         </marc:datafield>
-        
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Titel (Variante)']">
@@ -195,7 +174,7 @@
         <marc:datafield tag="500" ind1=" " ind2=" " >
             <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
         </marc:datafield>
-        
+
     </xsl:template>
 
     <xsl:template match="DataElement[@ElementName='Titel der Serie']">
@@ -265,12 +244,42 @@
     
 
     <xsl:template match="DataElement[@ElementName='Archivalienart']">
-        
-        <!-- 
-        <marc:datafield tag="300" ind1=" " ind2=" " >
-            <marc:subfield code="a">Fotografie</marc:subfield>
-        </marc:datafield>
-        -->
+
+        <xsl:variable name="archivalienart" select="ElementValue/TextValue/text()"/>
+        <xsl:variable name="technik" select="following-sibling::DataElement[@ElementName='Technik']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="bildmasse" select="following-sibling::DataElement[@ElementName='Effektive Masse Bild']/ElementValue/TextValue/text()"/>
+
+        <xsl:if test="$archivalienart | $technik | $bildmasse">
+         <marc:datafield tag="300" ind1=" " ind2=" " >
+            <xsl:choose>
+                <xsl:when test="$technik">
+                    <xsl:choose>
+                        <xsl:when test="fn:contains($technik,', ')">
+                            <xsl:variable name="sfa" select="fn:substring-before($technik,', ')"/>
+                            <xsl:variable name="sfb" select="fn:substring-after($technik,', ')"/>
+                            <marc:subfield code="a"><xsl:value-of select="$sfa" /></marc:subfield>
+                            <marc:subfield code="b"><xsl:value-of select="$sfb" /></marc:subfield>
+                        </xsl:when>
+                        <xsl:when test="fn:contains($technik,'; ')">
+                            <xsl:variable name="sfa" select="fn:substring-before($technik,'; ')"/>
+                            <xsl:variable name="sfb" select="fn:substring-after($technik,'; ')"/>
+                            <marc:subfield code="a"><xsl:value-of select="$sfa" /></marc:subfield>
+                            <marc:subfield code="b"><xsl:value-of select="$sfb" /></marc:subfield>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <marc:subfield code="a"><xsl:value-of select="$technik" /></marc:subfield>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
+                <xsl:when test="$archivalienart">
+                    <marc:subfield code="a"><xsl:value-of select="$archivalienart" /></marc:subfield>
+                </xsl:when>
+            </xsl:choose>
+            <xsl:if test="$bildmasse">
+                <marc:subfield code="c"><xsl:value-of select="$bildmasse" /></marc:subfield>
+            </xsl:if>
+         </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     
@@ -360,35 +369,7 @@
             bleibt unberücksichtigt!
         -->
     </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='FotografIn']">
-        
-        <!-- Tobias 
-            Vielleicht wäre hier ein $4-Relator-Code sinnvoll, um die Urheberin klar zu spezifizieren. 
-            Yvonne
-            -> entspricht nicht der Praxis der NB
-            Tobias
-            -> Wenn ein Feld 100 vorkommt, wird beim Feld 245 der 1. Indikator zu ind1="1"
-            
-            -> es wäre besser, wenn der Fotograf aus dem Deskriptoren-Feld generiert wird, 
-            anstelle dieses Feldes, hier kann auch "unbekannt" eingegeben werden, was für eine Übernahme ins Feld 100 
-            keinen Sinn macht (siehe am Schluss der Tabelle).
-            -> Bibliothekarisch bekommt der Fotograf ein 100. Die Frage ist, ob diese Differenzierung mit 
-            Haupteintragung bei einem Archivbestand nötig/gewünscht ist.
-            
-            falls weitere Fotografen vorhanden sind, diese in:
-            <marc:datafield tag="700" ind1="1" ind2=" ">
-            marc:subfield code="a">Nachname, Vorname</marc:subfield></marc:datafield> -> dieser Fall kommt nicht vor.            
-        -->
-        
-        <!-- the content of this template  is covered in the named templates 
-        
-        cdFsingFotografin and 
-        cdFmultFotografin
-        because there is a differentiatiation between first and subsequent persons  
-        -->
-        
-    </xsl:template>
+
     
     <xsl:template match="DataElement[@ElementName='Angaben zum Vertrieb/Verlag']">
         <!-- 
@@ -614,15 +595,6 @@
 
     <xsl:template match="DataElement[@ElementName='Ort']">
 
-        <!-- 
-            Die Angaben aus Postleitzahl, Ort, 
-            Strasse sollten in ein Feld 651 kommen, 
-            da sie einzeln nicht viel aussagen: 
-            zuerst Strasse mit Komma Leerschlag, dann Postleitzahl mit Leerschlag, 
-            dann Ort
-        --> 
-        
-
         <xsl:variable name="ort" select="ElementValue/TextValue/text()"/>
         <xsl:variable name="plz" select="preceding-sibling::DataElement[@ElementName='Postleitzahl']/ElementValue/TextValue/text()"/>
         <xsl:variable name="strasse" select="following-sibling::DataElement[@ElementName='Strasse']/ElementValue/TextValue/text()"/>
@@ -645,6 +617,16 @@
         </marc:datafield>
     </xsl:template>
     
+    <xsl:template match="DataElement[@ElementName='Strasse']">
+        <!--
+         in Ort enthalten            
+        <marc:datafield tag="651" ind1=" " ind2="7" >
+            <marc:subfield code="a">keine Beipieldaten</marc:subfield>
+            <marc:subfield code="2">CHARCH</marc:subfield>
+        </marc:datafield>
+        -->
+            
+    </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Lokalname']">
         <marc:datafield tag="690" ind1=" " ind2="7" >
@@ -802,6 +784,19 @@
             bleibt unberücksichtigt!
         -->
     </xsl:template>
+    
+    <xsl:template match="DataElement[@ElementName='Standard Bildformat']">
+        
+        <!-- 
+            Angabe nur wenn auf dieser Stufe vorhanden, sonst Unterfeld weglassen
+        -->
+        <!--
+        <marc:datafield tag="300" ind1=" " ind2=" " >
+            <marc:subfield code="c"><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
+        </marc:datafield>
+        -->
+    </xsl:template>
+                
 
     <xsl:template match="DataElement[@ElementName='Interne Angaben']">
         <!-- 
@@ -891,23 +886,12 @@
         -->
     </xsl:template>
     
-
-    <xsl:template match="DataElement[@ElementName='Effektive Masse Bild']">
-
-        <xsl:comment>Achtung: keine MARCdefinitionen für Effektive Masse Bild</xsl:comment>
-        
-    </xsl:template>
-    
     <xsl:template match="DataElement[@ElementName='Transparenz']">
         <xsl:comment>Achtung: keine MARCdefinitionen für Transparenz</xsl:comment>
     </xsl:template>
 
     <xsl:template match="DataElement[@ElementName='Montage']">
         <xsl:comment>Achtung: keine MARCdefinitionen für Montage</xsl:comment>
-    </xsl:template>
-
-    <xsl:template match="DataElement[@ElementName='Fototechnik allgemein']">
-        <xsl:comment>Achtung: keine MARCdefinitionen für Fototechnik allgemein</xsl:comment>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Verfahren']">
@@ -916,10 +900,6 @@
     
     <xsl:template match="DataElement[@ElementName='Trägermaterial']">
         <xsl:comment>Achtung: keine MARCdefinitionen für Trägermaterial</xsl:comment>
-    </xsl:template>
-        
-    <xsl:template match="DataElement[@ElementName='Fototechnik genau']">
-        <xsl:comment>Achtung: keine MARCdefinitionen für Fototechnik genau</xsl:comment>
     </xsl:template>
         
     <xsl:template match="DataElement[@ElementName='Standort / Behältnis']">
@@ -1044,7 +1024,6 @@
         
         Zinggeler, Rudolf (1864 - 1954)
         -->
-
             <xsl:if test="Name[text()='ArchitektIn']">
                 <xsl:choose>
                     <xsl:when test="Thesaurus[text()='Körperschaften']">
@@ -1152,28 +1131,11 @@
                 <xsl:choose>
                     <xsl:when test="Thesaurus[text()='Körperschaften']">
                         <xsl:variable name="koerperschaftvalue" select="normalize-space(IdName/text())"/>
-                        <!--marc:datafield tag="710"  ind1="1" ind2=" "  >
-                            <marc:subfield code="a"><xsl:value-of select="$koerperschaftvalue"/></marc:subfield>
-                        </marc:datafield-->
-                        <xsl:analyze-string select="$koerperschaftvalue" regex="(Körperschaften\\[A-Z]\\)(.*)(\(.*\))">
+                        <xsl:analyze-string select="$koerperschaftvalue" regex="(Körperschaften\\[A-Z]\\)(.*)(\))">
                             <xsl:matching-substring>
                                 <xsl:variable name="part1" select="regex-group(2)"/>
-                                <xsl:variable name="part2" select="regex-group(3)"/>
                                 <marc:datafield tag="710" ind1="2" ind2=" ">
                                     <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
-                                    <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
-                                    <marc:subfield code="4">pht</marc:subfield>
-                                </marc:datafield>
-                            </xsl:matching-substring>
-                        </xsl:analyze-string>
-                        <xsl:analyze-string select="$koerperschaftvalue" regex="(Körperschaften\\[A-Z]\\)(Schweiz\. )(.*)(\))">
-                            <xsl:matching-substring>
-                                <xsl:variable name="part1" select="regex-group(2)"/>
-                                <xsl:variable name="part2" select="regex-group(3)"/>
-                                <marc:datafield tag="710"  ind1="1" ind2=" "  >
-                                    <marc:subfield code="a"><xsl:value-of select="fn:translate($part1,' .()','')"/></marc:subfield>
-                                    <marc:subfield code="b"><xsl:value-of select="normalize-space($part2)"/></marc:subfield>
-                                    <marc:subfield code="4">pht</marc:subfield>
                                 </marc:datafield>
                             </xsl:matching-substring>
                         </xsl:analyze-string>
@@ -1199,7 +1161,7 @@
                                 <!-- Kommafall -->
                                 <xsl:choose>
                                     <xsl:when test="fn:contains($part1,',')">">
-                                        <xsl:variable name="nn" select="fn:substring-before($part1,',')"/> 
+                                        <xsl:variable name="nn" select="fn:substring-before($part1,',')"/>
                                         <xsl:variable name="vn" select="fn:substring-after($part1,',')"/>
                                         <marc:datafield tag="700"  ind1="1" ind2=" "  >
                                             <marc:subfield code="a"><xsl:value-of select="normalize-space($nn)"/></marc:subfield>
@@ -1209,7 +1171,7 @@
                                         </marc:datafield>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <marc:datafield tag="700"  ind1="0" ind2=" "  >
+                                        <marc:datafield tag="700"  ind1="1" ind2=" "  >
                                             <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
                                             <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
                                             <marc:subfield code="4">pht</marc:subfield>
@@ -1221,45 +1183,6 @@
                     </xsl:when>
                 </xsl:choose>
             </xsl:if>
-        
-        <!--
-
-         Günter: 3.11.2010 (Yvonne v. 28.10.2010)
-         Fotografen werden jetzt generell in die 700er Felder genommen
-        <xsl:choose>
-            <xsl:when test="Name[text()='FotografIn']">
-            <marc:datafield tag="100"  ind1=" " ind2="1"  >
-                    <marc:subfield code="a"><xsl:value-of select="normalize-space(IdName/text())"/></marc:subfield>
-                </marc:datafield>
-                <xsl:comment>Achtung: hier ein Problem mit den Daten aus dem DataElement Fotografin
-                    Was nehmen wir??
-                </xsl:comment>
-                <xsl:comment>Würde es nicht Sinn machen, hier auch die Personen aus dem SeeAlso Tag zu nehmen??</xsl:comment>
-            </xsl:when>
-            <xsl:when test="Name[text()='Brustbild']">
-                <marc:datafield tag="655" ind1=" " ind2="7" >
-                    <marc:subfield code="a"><xsl:value-of select="normalize-space(IdName/text())"/></marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
-                <xsl:comment>Was machen wir beim Brustbild mit dem Thesaurus tag</xsl:comment>
-                
-            </xsl:when>
-
-            <xsl:when test="Name[text()='Abgebildete Person']">
-                <marc:datafield tag="600" ind1=" " ind2="7" >
-                    <marc:subfield code="a"><xsl:value-of select="normalize-space(child::IdName/text())"/></marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
-                <xsl:comment>Warum hier eigentlich das CHARCH??</xsl:comment>
-                <xsl:comment>Wie kommen wir an die Personen aus dem Thesaurus</xsl:comment>
-            </xsl:when>
-            
-            <xsl:when test="Name[text()='Kopfbild']">
-                <xsl:comment>Achtung: keine MARCdefinitionen für Descriptors/Descriptor/Name[text()='Kopfbild']</xsl:comment>
-            </xsl:when>
-            
-        </xsl:choose>
-        -->
         
     </xsl:template>
         
@@ -1347,7 +1270,7 @@
                     
                 </xsl:otherwise>
             </xsl:choose>
-            <xsl:text>sz                inzxx d</xsl:text>
+            <xsl:text>sz                cnzxx d</xsl:text>
             
         </marc:controlfield>
     </xsl:template>
@@ -1370,25 +1293,6 @@
             </marc:subfield>
         </marc:datafield>
     </xsl:template>
-    
-
-    <xsl:template name="cdFmultFotografin">
-        <marc:datafield  tag="700"  ind1="1" ind2=" "  >
-            <marc:subfield code="a">
-                <xsl:value-of select="ElementValue/TextValue/text()"/>
-            </marc:subfield>
-        </marc:datafield>
-    </xsl:template>
-    
-
-    <xsl:template name="cdFsingFotografin">
-        <marc:datafield  tag="100"  ind1="1" ind2=" "  >
-            <marc:subfield code="a">
-                <xsl:value-of select="ElementValue/TextValue/text()"/>
-            </marc:subfield>
-        </marc:datafield>
-    </xsl:template>
-    
 
     <xsl:template match="DataElement[@ElementName='Partnerangaben Verlag/Vertrieb']" mode="feld260">
         <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
@@ -1416,18 +1320,6 @@
             </marc:datafield>
         -->
             <marc:subfield code="c"><xsl:value-of select="ElementValue/DateRange/TextRepresentation/text()"/></marc:subfield>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Archivalienart']" mode="feld300">
-            <marc:subfield code="a">Fotografie</marc:subfield>
-    </xsl:template>
-
-    <xsl:template match="DataElement[@ElementName='Farbe']" mode="feld300">
-        <marc:subfield code="b"><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Standard Bildformat']" mode="feld300">
-        <marc:subfield code="c"><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
     </xsl:template>
     
 </xsl:stylesheet>
