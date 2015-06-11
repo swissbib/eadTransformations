@@ -1192,7 +1192,7 @@
     
    <xsl:template name="createLeader">
         <marc:leader >
-            <xsl:text> nkm a22     4  4500</xsl:text>
+            <xsl:text>    nkm a22     4  4500</xsl:text>
         </marc:leader>
     </xsl:template>
 
