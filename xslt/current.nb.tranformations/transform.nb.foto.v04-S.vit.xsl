@@ -92,13 +92,13 @@
                 <xsl:variable name="datafields">
                     <xsl:apply-templates select="DetailData/DataElement"/>
                     <xsl:apply-templates select="Descriptors/Descriptor"/>
-                    <marc:datafield tag="260" ind2=" " ind1=" " >
-                        <xsl:apply-templates select="DetailData/DataElement[@ElementName='Entstehungszeitraum'] | 
-                            DetailData/DataElement[@ElementName='Vertrieb/Verlag'] | 
-                            DetailData/DataElement[@ElementName='Partnerangaben Verlag/Vertrieb']" mode="feld260"/>
-                    </marc:datafield>
+                    
+                    <!-- named templates -->
+                    <xsl:call-template name="cdF260"/>
+                    <xsl:call-template name="cdF542"/>
+                    <xsl:call-template name="cdF562"/>
 
-                        <!-- VM020353 = Bild (online) und der dazu gehörende allg. Filtercode XM020000 -->
+                    <!-- VM020353 = Bild (online) und der dazu gehörende allg. Filtercode XM020000 -->
                     <marc:datafield tag="898" ind2=" " ind1=" " >
                         <marc:subfield code="a"><xsl:text>VM020453</xsl:text></marc:subfield>
                         <marc:subfield code="b"><xsl:text>XM020400</xsl:text></marc:subfield>
@@ -244,6 +244,47 @@
         </xsl:for-each>
     </xsl:template>
     
+    <!-- MARC-Feld 260 -->
+    <xsl:template name="cdF260">
+        <xsl:variable name="ort" select="DetailData/DataElement[@ElementName='Partnerangaben Verlag/Vertrieb']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="verlag" select="DetailData/DataElement[@ElementName='Vertrieb/Verlag']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="zeit" select="DetailData/DataElement[@ElementName='Entstehungszeitraum']/ElementValue/DateRange/TextRepresentation/text()"/>
+        
+        <marc:datafield tag="260" ind1=" " ind2=" ">
+            <xsl:choose>
+                <xsl:when test="$ort | $verlag | $zeit">
+                    <xsl:choose>
+                        <xsl:when test="$ort">
+                            <marc:subfield code="a"><xsl:value-of select="$ort"/></marc:subfield>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <marc:subfield code="a">[s.l.]</marc:subfield>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                    <xsl:choose>
+                        <xsl:when test="$verlag">
+                            <marc:subfield code="b"><xsl:value-of select="$verlag"/></marc:subfield>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <marc:subfield code="b">[s.n.]</marc:subfield>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                    <xsl:choose>
+                        <xsl:when test="$zeit">
+                            <marc:subfield code="c"><xsl:value-of select="$zeit"/></marc:subfield>
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <marc:subfield code="c">[unbekannt]</marc:subfield>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:when>
+                <xsl:otherwise>
+                    <marc:subfield code="c">[unbekannt]</marc:subfield>
+                </xsl:otherwise>
+            </xsl:choose>
+        </marc:datafield>
+    </xsl:template>
+    
     <!-- MARC-Feld: 300 -->
     <!-- Achtung: Unterscheidet sich von BILD -->
     <xsl:template match="DataElement[@ElementName='Archivalienart']">
@@ -349,57 +390,50 @@
     
     <!-- MARC-Feld 542 -->
 
-    <xsl:template match="DataElement[@ElementName='Urheberrechts-Inhaber']">
-        <marc:datafield tag="542" ind1=" " ind2=" " >
-            <marc:subfield code="d"><xsl:value-of select="ElementValue/TextValue/text()"/>
-            </marc:subfield>
-        </marc:datafield>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Bemerkungen zum Urheberrechts-Inhaber']">
-        <marc:datafield tag="542" ind1=" " ind2=" " >
-            <marc:subfield code="n"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Partnerangaben Urheberrechts-Inhaber']">
-        <marc:datafield tag="542" ind1=" " ind2=" " >
-            <marc:subfield code="e"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+    <xsl:template name="cdF542">
+        <xsl:variable name="UrheberrechtsInhaber" select="DetailData/DataElement[@ElementName='Urheberrechts-Inhaber']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="BemUrheberrechtsInhaber" select="DetailData/DataElement[@ElementName='Bemerkungen zum Urheberrechts-Inhaber']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="PartUrheberrechtsInhaber" select="DetailData/DataElement[@ElementName='Partnerangaben Urheberrechts-Inhaber']/ElementValue/TextValue/text()"/>
+
+            <xsl:if test="$UrheberrechtsInhaber | $BemUrheberrechtsInhaber | $PartUrheberrechtsInhaber">
+                <marc:datafield tag="542" ind1=" " ind2=" ">
+                <xsl:if test="$UrheberrechtsInhaber">
+                    <marc:subfield code="d"><xsl:value-of select="$UrheberrechtsInhaber"/></marc:subfield>
+                </xsl:if>
+                <xsl:if test="$PartUrheberrechtsInhaber">
+                    <marc:subfield code="e"><xsl:value-of select="$PartUrheberrechtsInhaber"/></marc:subfield>
+                </xsl:if>
+                <xsl:if test="$BemUrheberrechtsInhaber">
+                    <marc:subfield code="n"><xsl:value-of select="$BemUrheberrechtsInhaber"/></marc:subfield>
+                </xsl:if>
+                </marc:datafield>
+            </xsl:if>
     </xsl:template>
 
-    <!-- MARC-Feld 562
-        Kombination: <marc:datafield tag="562" ind1=" " ind2=" ">
-        <marc:subfield code="c">Legende, Bemerkung zur Beschriftung 
-        – Legende; Unterschrift, Bemerkung zur Unterschrift</marc:subfield> -> 
-        mit angezogenem Semikolon trennen ODER pro Art und 
-        Bemerkung ein Feld 562.
-    -->
-    
-    <xsl:template match="DataElement[@ElementName='Beschriftung - Legende']">
-        <xsl:for-each select="ElementValue">
-            <marc:datafield tag="562" ind1=" " ind2=" " >
-                <marc:subfield code="c"><xsl:value-of select="TextValue/text()"/></marc:subfield>
-            </marc:datafield>
-        </xsl:for-each>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Bemerkung zur Beschriftung - Legende']">
-        <marc:datafield tag="562" ind1=" " ind2=" " >
-            <marc:subfield code="c"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
-    </xsl:template>
+    <!-- MARC-Feld 562 -->
+    <xsl:template name="cdF562">
+        <xsl:variable name="BemBeschriftung" select="DetailData/DataElement[@ElementName='Bemerkung zur Beschriftung - Legende']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="Unterschrift" select="DetailData/DataElement[@ElementName='Unterschrift']/ElementValue/TextValue/text()"/>
+        <xsl:variable name="BemUnterschrift" select="DetailData/DataElement[@ElementName='Bemerkung zur Unterschrift - Legende']/ElementValue/TextValue/text()"/>
 
-    <xsl:template match="DataElement[@ElementName='Unterschrift']">
-        <marc:datafield tag="562" ind1=" " ind2=" " >
-            <marc:subfield code="c"><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
-        </marc:datafield>
-    </xsl:template>
-    
-    <xsl:template match="DataElement[@ElementName='Bemerkung zur Unterschrift']">
-        <marc:datafield tag="562" ind1=" " ind2=" " >
-            <marc:subfield code="c"><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
-        </marc:datafield>
+            <xsl:if test="DetailData/DataElement[@ElementName='Beschriftung - Legende'] | $BemBeschriftung | $Unterschrift | $BemUnterschrift">
+                <marc:datafield tag="562" ind1=" " ind2=" ">
+                <xsl:if test="DetailData/DataElement[@ElementName='Beschriftung - Legende']">
+                    <xsl:for-each select="DetailData/DataElement[@ElementName='Beschriftung - Legende']/ElementValue">
+                        <marc:subfield code="c"><xsl:value-of select="TextValue/text()"/></marc:subfield>
+                    </xsl:for-each>
+                </xsl:if>
+                <xsl:if test="$BemBeschriftung">
+                    <marc:subfield code="c"><xsl:value-of select="$BemBeschriftung"/></marc:subfield>
+                </xsl:if>
+                <xsl:if test="$Unterschrift">
+                    <marc:subfield code="c"><xsl:value-of select="$Unterschrift"/></marc:subfield>
+                </xsl:if>
+                <xsl:if test="$BemUnterschrift">
+                    <marc:subfield code="c"><xsl:value-of select="$BemUnterschrift"/></marc:subfield>
+                </xsl:if>
+                </marc:datafield>
+            </xsl:if>
     </xsl:template>
     
     <!-- MARC-Feld 581 -->
@@ -863,37 +897,6 @@
             </marc:datafield>
             
         </xsl:if>
-    </xsl:template>
-        
-
-    <!-- refactor these named templates later (own modules) -> should be imported!  -->
-
-    <xsl:template match="DataElement[@ElementName='Partnerangaben Verlag/Vertrieb']" mode="feld260">
-        <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-    </xsl:template>
-    <xsl:template match="DataElement[@ElementName='Vertrieb/Verlag']" mode="feld260">
-        <marc:subfield code="b"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-    </xsl:template>
-    <xsl:template match="DataElement[@ElementName='Entstehungszeitraum']" mode="feld260">
-        <!--
-            Guenter:
-            Dieses Feld hat eine komplexere Struktur in EAD
-            <DateRange DateOperator="exact">
-            <FromDate>+2002</FromDate>
-            <FromApproxIndicator>false</FromApproxIndicator>
-            <ToDate/>
-            <ToApproxIndicator>false</ToApproxIndicator>
-            <TextRepresentation>2002</TextRepresentation>
-            </DateRange>
-            -> möglicherweise brauche ich den Scope Datentyp?!
-        --> 
-        <!--
-            Vorerst nehme ich hier ToDate - bis ich genauere Angaben zum datentyp von Scope erhalte            
-            <marc:datafield tag="260" ind1=" " ind2=" " >
-            <marc:subfield code="c">s. Frage zum Datentyp</marc:subfield>
-            </marc:datafield>
-        -->
-            <marc:subfield code="c"><xsl:value-of select="ElementValue/DateRange/TextRepresentation/text()"/></marc:subfield>
     </xsl:template>
     
 </xsl:stylesheet>
