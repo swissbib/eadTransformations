@@ -198,7 +198,7 @@
                  </xsl:otherwise>
              </xsl:choose>
               <!-- Land und Rest: 12-39 (grob) -->
-             <xsl:text>sz                cnzxx d</xsl:text>
+             <xsl:text>    sz                cnzxx d</xsl:text>
          </marc:controlfield>
      </xsl:template>
     
