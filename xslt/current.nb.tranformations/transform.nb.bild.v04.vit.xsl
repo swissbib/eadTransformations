@@ -1106,10 +1106,10 @@
                 <xsl:when test="DetailData/DataElement[@ElementName='Titel der Serie']">
                     <xsl:value-of select="DetailData/DataElement/ElementValue/TextValue/text()" />
                 </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-ZING   ')">
+                <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
                     <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
                 </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-ZING')">
+                <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
                     <xsl:value-of select="parent::node()/attribute::IdName" />
                 </xsl:when>
                 <xsl:otherwise>
@@ -1132,7 +1132,8 @@
                 <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
                 <xsl:choose>
                     <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                        <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                        <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
                     </xsl:when>
                 </xsl:choose>
             </marc:datafield>
