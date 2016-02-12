@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:fn="http://www.w3.org/2005/xpath-functions"
+    exclude-result-prefixes="#all"
      version="2.0"
      xmlns:marc="http://www.loc.gov/MARC21/slim">
     
@@ -24,14 +25,20 @@
     <xsl:param name="hostname" select="'http://www.nb.admin.ch/'" />
     
     <!-- Sammlungscode für swissbib (muss mit swissbib abgesprochen werden)
-     CHARCH01: Graphische Sammlung - EAD
+     CHARCH01: Graphische Sammlung
      CHARCH02: Schweizerisches Literatur Archiv (aktuell nur Fotos Annemarie Schwarzenbach)
-     CHARCH03: Graphische Sammlung - Sammlung Guggelmann
+     CHARCH03: Spezialarchive
      CHARCH04: CDN - Dürrenmatt Werke
     -->
     <xsl:param name="institutioncode" select="'CHARCH01'" /> <!-- Standard, da die meisten Sammlungen aktuell von dieser Institution stammen -->
     <xsl:param name="bild" select="'N'" /> <!-- Ermöglicht das Ein- und Ausblenden von URLs. Standard ist 'N', da die meisten Sammlungen nicht mit Vorschau und Ansichtsbildern geliefert werden. Ansonsten ist 'Y' zu setzen -->
-    <xsl:param name="level" select="'ALL'" /> <!-- Ermöglicht die Einschränkung auf Dokumente. Standard ist 'ALL' - es werden alle Ebenen geliefert. Jeder andere Wert liefert nur die Dokumente. -->
+    
+    <!-- Selektionscode zur Einschränkung auf Datensätze (muss mit swissbib abgesprochen werden)
+     ALL = liefert sämtliche Ebenen
+     BESTAND = liefert nur Ebene Bestand
+     DOK = liefert nur Dokumente
+    -->
+    <xsl:param name="level" select="'BESTAND'" /> <!-- Ermöglicht die Einschränkung auf Datensätze. Standard ist 'BESTAND'. -->
     
     
     <!-- Vorschaulinks auf helveticarchives -->
@@ -73,75 +80,111 @@
         -->
         
         <xsl:choose>
-            <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true')"> <!-- Dokument: Bilder und Gemälde -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'bild'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="((@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie') and (DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true')) and Descriptors/Descriptor/IdName/text() = 'FotografIn  (Personen\S\Schwarzenbach, Annemarie (1908 - 1942))'"> <!-- Dokument: Fotografie Schwarzenbach -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'foto'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(((@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Fotografie')) and (DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true'))"> <!-- Dokument: Fotografie allgemein -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'foto'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Publikation')"> <!-- Dokument: Dokumente allgemein -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'monographie'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'monographie'" />
-                    </xsl:call-template>
+            <xsl:when test="$level = 'BESTAND'">
+                <!-- Additionally you can define arbitrary record ids that must not be transformed. 
+                     Used to exclude records that define the structure of the collection. -->
+                <xsl:variable name="exclude">
+                    <xsl:variable name="excl" select="163520,575402,222373,578185,96770,575401,537228,163522,576303,163524,222299,222310,222328" />
+                    <xsl:variable name="rms">
+                        <xsl:value-of select="$excl"/><xsl:text>,</xsl:text>
+                    </xsl:variable>
+                    <xsl:variable name="recid" select="@Id" />
+                    <xsl:for-each select="tokenize($rms, ',')">
+                        <xsl:choose>
+                            <xsl:when test="contains(., $recid)">
+                                <xsl:text>NI</xsl:text>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>YESS</xsl:text>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:if test="@Level='Bestand'">
+                    <xsl:choose>
+                        <xsl:when test="contains($exclude, 'NI')">
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'collection'" />
+                            </xsl:call-template>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </xsl:if>
             </xsl:when>
-            <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'dossier'" />
-                    </xsl:call-template>
-                </xsl:if>
-            </xsl:when>
-            <xsl:when test="@Level='Bestand'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'collection'" />
-                    </xsl:call-template>
-                </xsl:if>
+            <xsl:when test="$level = 'ALL' or $level = 'DOK'">
+                <xsl:choose>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Bilder und Gemälde {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'bild'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="contains(DetailData/DataElement[@ElementName='FotografIn']/ElementValue[1]/TextValue/text(), 'Schwarzenbach') and (@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Fotografie Schwarzenbach {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'foto'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']) and lower-case($institutioncode) != 'charch02'"> <!-- ACHTUNG nur solange funktional wie nur eine Fotosammlung des SLA digitalisiert ist. Dokument: Fotografie allgemein { and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'foto'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Publikation')"> <!-- Dokument: Dokumente allgemein -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'monographie'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'monographie'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                    <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'dossier'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                    <xsl:when test="@Level='Bestand'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'collection'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                </xsl:choose>
             </xsl:when>
         </xsl:choose>
     
         <!-- now look out for the next Record node until the whole XML Input Document is being processed-->
-        <xsl:apply-templates select="Record"/>
+       <xsl:apply-templates select="Record"/>
     </xsl:template>
    
     
@@ -1086,36 +1129,9 @@
         </marc:datafield>
     </xsl:template>
     
-    <!-- Linking Marc-Feld: 490 / 775 / 830 -->
+    <!-- Linking Marc-Feld: 490 / 775 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 779 -->
     <!-- ACHTUNG: Das Linking ist komplett an swissbib angepasst und entspricht nicht den Gepflogenheiten von MARC21 -->
     <xsl:template name="Linking">
-        <xsl:variable name="cdF830w">
-            <xsl:variable name="parentid" select="@ParentId" />
-            <xsl:variable name="recordid" select="parent::node()/attribute::Id" />
-            <xsl:choose>
-                <xsl:when test="$parentid = $recordid">
-                    <xsl:value-of select="$recordid" />
-                </xsl:when>
-                <xsl:otherwise>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:variable name="cdF490a">
-            <xsl:choose>
-                <xsl:when test="DetailData/DataElement[@ElementName='Titel der Serie']">
-                    <xsl:value-of select="DetailData/DataElement/ElementValue/TextValue/text()" />
-                </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
-                    <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
-                </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
-                    <xsl:value-of select="parent::node()/attribute::IdName" />
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
         <xsl:variable name="parentLevel">
             <xsl:choose>
                 <xsl:when test="parent::node()/attribute::Level">
@@ -1125,36 +1141,121 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
-        
-        <xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and ($parentLevel='Sammlungseinheit' or $parentLevel='Serie' or $parentLevel='Bestand' or $parentLevel='Dossier'))">
-            <marc:datafield tag="490" ind1="1" ind2=" " >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
+        <xsl:choose>
+            <xsl:when test="$level='BESTAND'">
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="parent::node()/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:if test="$cdF490a != ''">
+                    <marc:datafield tag="490" ind1="1" ind2=" " >
+                        <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                    </marc:datafield>
+                </xsl:if>
+            </xsl:when>
+            <xsl:when test="$level='DOK'">
+                <xsl:variable name="cdF490v" select="fn:substring-before(./@IdName, '   ')" />
+                <xsl:variable name="cdF830w" select="root(.)/ExportRoot/Record/attribute::Id" />
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="fn:contains(root(.)/ExportRoot/Record/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(root(.)/ExportRoot/Record/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(root(.)/ExportRoot/Record/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="root(.)/ExportRoot/Record/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(root(.)/ExportRoot/Record/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <marc:datafield tag="779" ind1="1" ind2=" " >
+                    <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                    <xsl:if test="$cdF490v !=''">
+                        <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
+                    </xsl:if>
+                    <xsl:if test="$cdF830w !=''">
                         <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
                         <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield>
-           <!-- <marc:datafield tag="830" ind1=" " ind2="0" >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield> -->
-        </xsl:if>
-        <xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and $parentLevel='Dokument')">
-            <marc:datafield tag="775" ind1="0" ind2="8" >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield>
-        </xsl:if>
+                    </xsl:if>
+                </marc:datafield>
+                <!-- Related Document-->
+                <xsl:variable name="recid" select="../@Id"/>
+                <xsl:variable name="parentid" select="@ParentId"/>
+                <xsl:variable name="levl" select="../@Level"/>
+                <xsl:if test="($recid = $parentid) and $levl = 'Dokument'">
+                    <xsl:variable name="rectitle" select="fn:substring-after(../attribute::IdName, '   ')" />
+                    <marc:datafield tag="775" ind1="0" ind2="8" >
+                        <marc:subfield code="a"><xsl:value-of select="$rectitle"/></marc:subfield>
+                        <xsl:choose>
+                            <xsl:when test="$parentid !=''">
+                                <marc:subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$parentid"/></marc:subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </marc:datafield>
+                </xsl:if>
+                
+            </xsl:when>
+            <xsl:when test="ALL">
+                <xsl:variable name="cdF830w">
+                    <xsl:variable name="parentid" select="@ParentId" />
+                    <xsl:variable name="recordid" select="parent::node()/attribute::Id" />
+                    <xsl:choose>
+                        <xsl:when test="$parentid = $recordid">
+                            <xsl:value-of select="$recordid" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="DetailData/DataElement[@ElementName='Titel der Serie']">
+                            <xsl:value-of select="DetailData/DataElement/ElementValue/TextValue/text()" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="parent::node()/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+        
+                <!-- xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and ($parentLevel='Sammlungseinheit' or $parentLevel='Serie' or $parentLevel='Bestand' or $parentLevel='Dossier'))" -->
+                <xsl:if test="$cdF490a != ''">
+                    <marc:datafield tag="779" ind1="1" ind2=" " >
+                        <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                        <xsl:choose>
+                            <xsl:when test="$cdF830w != ''">
+                                <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                                <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </marc:datafield>
+                   <!-- <marc:datafield tag="830" ind1=" " ind2="0" >
+                        <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                        <xsl:choose>
+                            <xsl:when test="$cdF830w !=''">
+                                <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </marc:datafield> -->
+                </xsl:if>
+            </xsl:when>
+        </xsl:choose>
     </xsl:template>
     
     <!-- MARC-Feld 500 -->
@@ -1174,7 +1275,11 @@
     
     <xsl:template match="DataElement[@ElementName='Verwandtes Material']">
         <marc:datafield tag="500" ind1=" " ind2=" " >
-            <marc:subfield code="a">Verwandtes Material: <xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
+            <marc:subfield code="a"><xsl:text>Verwandtes Material: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template> 
     
@@ -1197,44 +1302,72 @@
     <!-- MARC-Feld 516 -->
     <xsl:template match="DataElement[@ElementName='Digitales Fileformat']">
         <marc:datafield tag="516" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <!-- MARC-Feld 520 --> 
     <xsl:template match="DataElement[@ElementName='Kurzbeschreibung']">
         <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bemerkung zur Kurzbeschreibung']">
         <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Inhalt']">
         <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bestandsbeschreibung']">
         <marc:datafield tag="520" ind1="2" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Stichwort']">
         <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Darin']">
         <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
@@ -1262,19 +1395,31 @@
     <!-- MARC-Feld 561 --> 
     <xsl:template match="DataElement[@ElementName='Art des Bestands']">
         <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Bestands: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a"><xsl:text>Art des Bestands: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Art des Erwerbs']">
         <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bestandsgeschichte']">
         <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </marc:subfield>
         </marc:datafield>
     </xsl:template>
 

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
     xmlns:fn="http://www.w3.org/2005/xpath-functions"
-     version="2.0"
-     xmlns:marc="http://www.loc.gov/MARC21/slim">
+    exclude-result-prefixes="#all"
+     version="2.0">
     
     <xsl:output 
         indent="yes" 
@@ -24,14 +24,20 @@
     <xsl:param name="hostname" select="'http://www.nb.admin.ch/'" />
     
     <!-- Sammlungscode für swissbib (muss mit swissbib abgesprochen werden)
-     CHARCH01: Graphische Sammlung - EAD
+     CHARCH01: Graphische Sammlung
      CHARCH02: Schweizerisches Literatur Archiv (aktuell nur Fotos Annemarie Schwarzenbach)
-     CHARCH03: Graphische Sammlung - Sammlung Guggelmann
+     CHARCH03: Spezialarchive
      CHARCH04: CDN - Dürrenmatt Werke
     -->
     <xsl:param name="institutioncode" select="'CHARCH01'" /> <!-- Standard, da die meisten Sammlungen aktuell von dieser Institution stammen -->
     <xsl:param name="bild" select="'N'" /> <!-- Ermöglicht das Ein- und Ausblenden von URLs. Standard ist 'N', da die meisten Sammlungen nicht mit Vorschau und Ansichtsbildern geliefert werden. Ansonsten ist 'Y' zu setzen -->
-    <xsl:param name="level" select="'ALL'" /> <!-- Ermöglicht die Einschränkung auf Dokumente. Standard ist 'ALL' - es werden alle Ebenen geliefert. Jeder andere Wert liefert nur die Dokumente. -->
+    
+    <!-- Selektionscode zur Einschränkung auf Datensätze (muss mit swissbib abgesprochen werden)
+     ALL = liefert sämtliche Ebenen
+     BESTAND = liefert nur Ebene Bestand
+     DOK = liefert nur Dokumente
+    -->
+    <xsl:param name="level" select="'BESTAND'" /> <!-- Ermöglicht die Einschränkung auf Datensätze. Standard ist 'BESTAND'. -->
     
     
     <!-- Vorschaulinks auf helveticarchives -->
@@ -48,18 +54,18 @@
     <xsl:param name="rights949z" select="'Reproduktionsbewilligung'" />
 
     <!-- =======================================
-         Sektion für die Sammlungsstruktur der marc:records 
+         Sektion für die Sammlungsstruktur der records 
          =======================================
     -->
     <xsl:template match="/">
-        <marc:collection >
+        <collection >
             <!-- start processing of record nodes -->
             <xsl:apply-templates/>
-        </marc:collection>
+        </collection>
     </xsl:template>
 
     <!-- =======================================
-         Sektion zur Erstellung der marc:record-Datenstruktur 
+         Sektion zur Erstellung der record-Datenstruktur 
          =======================================
     -->
 
@@ -73,81 +79,117 @@
         -->
         
         <xsl:choose>
-            <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true')"> <!-- Dokument: Bilder und Gemälde -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'bild'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="((@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie') and (DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true')) and Descriptors/Descriptor/IdName/text() = 'FotografIn  (Personen\S\Schwarzenbach, Annemarie (1908 - 1942))'"> <!-- Dokument: Fotografie Schwarzenbach -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'foto'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(((@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Fotografie')) and (DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true'))"> <!-- Dokument: Fotografie allgemein -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'foto'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(@Level='Dokument') and (AdministrativeData/EditForm/text() = 'NB Publikation')"> <!-- Dokument: Dokumente allgemein -->
-                <xsl:choose>
-                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                    </xsl:when>
-                    <xsl:otherwise>
-                        <xsl:call-template name="marcFields">
-                            <xsl:with-param name="type" select="'monographie'" />
-                        </xsl:call-template>
-                    </xsl:otherwise>
-                </xsl:choose>
-            </xsl:when>
-            <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'monographie'" />
-                    </xsl:call-template>
+            <xsl:when test="$level = 'BESTAND'">
+                <!-- Additionally you can define arbitrary record ids that must not be transformed. 
+                     Used to exclude records that define the structure of the collection. -->
+                <xsl:variable name="exclude">
+                    <xsl:variable name="excl" select="163520,575402,222373,578185,96770,575401,537228,163522,576303,163524,222299,222310,222328" />
+                    <xsl:variable name="rms">
+                        <xsl:value-of select="$excl"/><xsl:text>,</xsl:text>
+                    </xsl:variable>
+                    <xsl:variable name="recid" select="@Id" />
+                    <xsl:for-each select="tokenize($rms, ',')">
+                        <xsl:choose>
+                            <xsl:when test="contains(., $recid)">
+                                <xsl:text>NI</xsl:text>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:text>YESS</xsl:text>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:for-each>
+                </xsl:variable>
+                <xsl:if test="@Level='Bestand'">
+                    <xsl:choose>
+                        <xsl:when test="contains($exclude, 'NI')">
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'collection'" />
+                            </xsl:call-template>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </xsl:if>
             </xsl:when>
-            <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'dossier'" />
-                    </xsl:call-template>
-                </xsl:if>
-            </xsl:when>
-            <xsl:when test="@Level='Bestand'">
-                <xsl:if test="$level = 'ALL'">
-                    <xsl:call-template name="marcFields">
-                        <xsl:with-param name="type" select="'collection'" />
-                    </xsl:call-template>
-                </xsl:if>
+            <xsl:when test="$level = 'ALL' or $level = 'DOK'">
+                <xsl:choose>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Bilder und Gemälde {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'bild'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="contains(DetailData/DataElement[@ElementName='FotografIn']/ElementValue[1]/TextValue/text(), 'Schwarzenbach') and (@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Fotografie Schwarzenbach {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'foto'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']) and lower-case($institutioncode) != 'charch02'"> <!-- ACHTUNG nur solange funktional wie nur eine Fotosammlung des SLA digitalisiert ist. Dokument: Fotografie allgemein { and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'foto'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Publikation')"> <!-- Dokument: Dokumente allgemein -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'monographie'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
+                    <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'monographie'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                    <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'dossier'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                    <xsl:when test="@Level='Bestand'">
+                        <xsl:if test="$level = 'ALL'">
+                            <xsl:call-template name="marcFields">
+                                <xsl:with-param name="type" select="'collection'" />
+                            </xsl:call-template>
+                        </xsl:if>
+                    </xsl:when>
+                </xsl:choose>
             </xsl:when>
         </xsl:choose>
     
         <!-- now look out for the next Record node until the whole XML Input Document is being processed-->
-        <xsl:apply-templates select="Record"/>
+       <xsl:apply-templates select="Record"/>
     </xsl:template>
    
     
 
     <!-- =======================================
-         Sektion zur Erstellung der marc:Datenstruktur 
+         Sektion zur Erstellung der Datenstruktur 
          =======================================
     -->
 
@@ -155,7 +197,7 @@
     
         <!-- Dient der Definition von Dokumenttypen für Leader, 007, 008, 245$h und 898 -->
         <xsl:param name="type"/>
-        <marc:record >
+        <record >
             
             <!-- at first process fix nodes -primarily control nodes- which should be part of every MARC - record
             -->
@@ -200,22 +242,22 @@
 
             </xsl:variable>
 
-            <xsl:for-each select="$datafields/marc:datafield">
+            <xsl:for-each select="$datafields/datafield">
                 <xsl:sort select="./@tag"/> 
                 <xsl:copy-of select="."/>
             </xsl:for-each>
-        </marc:record>
+        </record>
     </xsl:template>
     
     <!-- =======================================
-         Sektion zur Erstellung der marc:Datenfelder
+         Sektion zur Erstellung der Datenfelder
          =======================================
     -->
     
     <!-- MARC-Feld 000 -->
     <xsl:template name="createLeader">
         <xsl:param name="type" />
-         <marc:leader >
+         <leader >
              <xsl:choose>
                  <xsl:when test="$type = 'foto' or $type = 'bild'"> 
                      <xsl:text>    nkm a22     4  4500</xsl:text>
@@ -233,22 +275,22 @@
                      <xsl:text>    npd a22     4  4500</xsl:text>
                  </xsl:otherwise>
              </xsl:choose>
-         </marc:leader>
+         </leader>
      </xsl:template>
      
      <!-- MARC-Feld 001 -->
      <xsl:template name="cCtrlF001">
-         <marc:controlfield tag="001" >
+         <controlfield tag="001" >
              <xsl:text>cha</xsl:text><xsl:value-of select="@Id"/>
-         </marc:controlfield>
+         </controlfield>
      </xsl:template>
 
      <!-- MARC-Feld 003 -->
      <!-- sauber wäre "Sz" , der Code ist aber für die NB und hier zu unspezifisch -->
      <xsl:template name="cCtrlF003">
-         <marc:controlfield tag="003">
+         <controlfield tag="003">
              <xsl:text>CHARCH</xsl:text>
-         </marc:controlfield>
+         </controlfield>
      </xsl:template>
 
      <!-- MARC-Feld 007 -->
@@ -256,7 +298,7 @@
          <xsl:param name="type" />
          <xsl:if test="$type = 'foto' or $type = 'bild'"> 
              <!-- cr plus 21 blanks -->
-             <marc:controlfield tag="007" ><xsl:text>cr                     </xsl:text></marc:controlfield>
+             <controlfield tag="007" ><xsl:text>cr                     </xsl:text></controlfield>
          </xsl:if>
          <xsl:if test="$type = 'collection' or $type = 'dossier'">
          </xsl:if>
@@ -560,7 +602,7 @@
              </xsl:choose>
          </xsl:variable>
          
-         <marc:controlfield  tag="008" >
+         <controlfield  tag="008" >
              <!-- Erstellungsdatum des Datensatzes: 00-05 -->
              <xsl:value-of select="$tempYearEdited2"></xsl:value-of>
              <xsl:value-of select="$tempMonthEdited"></xsl:value-of>
@@ -571,7 +613,7 @@
              <xsl:value-of select="$remains"></xsl:value-of>
              <xsl:value-of select="$lng"></xsl:value-of>
              <xsl:text> d</xsl:text>
-         </marc:controlfield>
+         </controlfield>
      </xsl:template>
     
     <!-- MARC-Feld 020 -->
@@ -635,51 +677,51 @@
                 </xsl:choose>
             </xsl:variable>
             <xsl:if test="fn:string-length($isbn) = 10 or (fn:string-length($isbn) = 13 and (fn:substring($isbn, 1,3) = '978' or fn:substring($isbn, 1,3) = '979'))">
-                <marc:datafield tag="020" ind1=" " ind2=" ">
-                    <marc:subfield code="a"><xsl:value-of select="$isbn"/></marc:subfield>
+                <datafield tag="020" ind1=" " ind2=" ">
+                    <subfield code="a"><xsl:value-of select="$isbn"/></subfield>
                     <xsl:if test="fn:string-length($remainder) &gt; 0">
                         <xsl:choose>
                             <xsl:when test="fn:contains(lower-case($remainder), 'br') or fn:contains(lower-case($remainder), 'geb')">
-                                <marc:subfield code="c"><xsl:value-of select="$remainder"/></marc:subfield>
+                                <subfield code="c"><xsl:value-of select="$remainder"/></subfield>
                             </xsl:when>
                             <xsl:otherwise>
-                                <marc:subfield code="q"><xsl:value-of select="$remainder"/></marc:subfield>
+                                <subfield code="q"><xsl:value-of select="$remainder"/></subfield>
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:if>
-                </marc:datafield>
+                </datafield>
             </xsl:if>
         </xsl:for-each>
     </xsl:template>
     
     <!-- MARC-Feld 035 -->
     <xsl:template name="cdF035">
-        <marc:datafield tag="035" ind1=" " ind2=" ">
-            <marc:subfield code="a">
+        <datafield tag="035" ind1=" " ind2=" ">
+            <subfield code="a">
                 <xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="@Id"/>
-            </marc:subfield>
-        </marc:datafield>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <!-- MARC-Feld 040 -->
     <xsl:template name="cdF040">
-        <marc:datafield tag="040" ind1=" " ind2=" ">
-            <marc:subfield code="a">
+        <datafield tag="040" ind1=" " ind2=" ">
+            <subfield code="a">
                 <xsl:text>Sz</xsl:text>
-            </marc:subfield>
-            <marc:subfield code="b">
+            </subfield>
+            <subfield code="b">
                 <xsl:text>ger</xsl:text>
-            </marc:subfield>
-            <marc:subfield code="c">
+            </subfield>
+            <subfield code="c">
                 <xsl:text>Sz</xsl:text>
-            </marc:subfield>
-        </marc:datafield>
+            </subfield>
+        </datafield>
     </xsl:template>
 
     <!-- MARC-Feld 041 -->
     <!-- TODO: Es werden nur jene Sprachen aufgeführt, die während der Evaluation gefunden wurden. Dies ist periodisch zu prüfen -->
     <xsl:template match="DataElement[@ElementName='Sprache']/ElementValue[@Sequence='2']">
-        <marc:datafield tag="041" ind1=" " ind2=" " >
+        <datafield tag="041" ind1=" " ind2=" " >
             <xsl:for-each select="../ElementValue/TextValue/text()">
                 <xsl:variable name="lng">
                    <xsl:variable name="lang" select="." />
@@ -794,37 +836,37 @@
                        </xsl:otherwise>
                    </xsl:choose>
                 </xsl:variable>
-                <marc:subfield code="a"><xsl:value-of select="$lng" /></marc:subfield>
+                <subfield code="a"><xsl:value-of select="$lng" /></subfield>
             </xsl:for-each>
-        </marc:datafield>
+        </datafield>
     </xsl:template>
 
     <!-- MARC-Feld 043 / 690 -->
     <xsl:template name="cdF043">
         <xsl:variable name="land" select="DetailData/DataElement[@ElementName='Land']/ElementValue/TextValue/text()"/>
         <xsl:variable name="kanton" select="DetailData/DataElement[@ElementName='Kanton']/ElementValue/TextValue/text()"/>
-        <!-- <marc:datafield tag="043" ind1=" " ind2=" " >
-            <marc:subfield code="a">sz</marc:subfield>
-            <marc:subfield code="c"><xsl:value-of select="$land"/><xsl:text>/</xsl:text><xsl:value-of select="$kanton"/></marc:subfield>
-        </marc:datafield> -->
+        <!-- <datafield tag="043" ind1=" " ind2=" " >
+            <subfield code="a">sz</subfield>
+            <subfield code="c"><xsl:value-of select="$land"/><xsl:text>/</xsl:text><xsl:value-of select="$kanton"/></subfield>
+        </datafield> -->
         <xsl:choose>
             <xsl:when test="($land !='' and $kanton !='') and (string-length($land) = 2 and string-length($kanton) = 2)">
-                <marc:datafield tag="043" ind1=" " ind2=" " >
-                    <marc:subfield code="a">sz</marc:subfield>
-                    <marc:subfield code="c"><xsl:value-of select="lower-case($land)"/><xsl:text>-</xsl:text><xsl:value-of select="lower-case($kanton)"/></marc:subfield>
-                </marc:datafield>
+                <datafield tag="043" ind1=" " ind2=" " >
+                    <subfield code="a">sz</subfield>
+                    <subfield code="c"><xsl:value-of select="lower-case($land)"/><xsl:text>-</xsl:text><xsl:value-of select="lower-case($kanton)"/></subfield>
+                </datafield>
             </xsl:when>
             <xsl:when test="($land !='' and $kanton !='') and (string-length($land) &gt; 2 and string-length($kanton) &gt; 2)">
-                <marc:datafield tag="690" ind1=" " ind2="7" >
-                    <marc:subfield code="B">g</marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="$land"/></marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
-                <marc:datafield tag="690" ind1=" " ind2="7" >
-                    <marc:subfield code="B">g</marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="$kanton"/></marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
+                <datafield tag="690" ind1=" " ind2="7" >
+                    <subfield code="B">g</subfield>
+                    <subfield code="a"><xsl:value-of select="$land"/></subfield>
+                    <subfield code="2">CHARCH</subfield>
+                </datafield>
+                <datafield tag="690" ind1=" " ind2="7" >
+                    <subfield code="B">g</subfield>
+                    <subfield code="a"><xsl:value-of select="$kanton"/></subfield>
+                    <subfield code="2">CHARCH</subfield>
+                </datafield>
             </xsl:when>
         </xsl:choose>
     </xsl:template>
@@ -849,29 +891,29 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
-        <marc:datafield tag="245" ind1="0" ind2="0" >
+        <datafield tag="245" ind1="0" ind2="0" >
             <xsl:choose>
                 <xsl:when test="$titel">
-                    <marc:subfield code="a"><xsl:value-of select="$titel"/></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$titel"/></subfield>
                     <xsl:choose>
                         <xsl:when test="$GMD !=''">
-                            <marc:subfield code="h"><xsl:value-of select="$GMD" /></marc:subfield>
+                            <subfield code="h"><xsl:value-of select="$GMD" /></subfield>
                         </xsl:when>
                     </xsl:choose>
                 </xsl:when>
                 <xsl:otherwise>
-                    <marc:subfield code="a"><xsl:value-of select="$fallback"/></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$fallback"/></subfield>
                 </xsl:otherwise>
             </xsl:choose>
-        </marc:datafield>
+        </datafield>
     </xsl:template>
 
     <!-- MARC-Feld: 246 -->
     <xsl:template match="DataElement[@ElementName='Titel (Variante)']/ElementValue/TextValue/text()">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="246" ind1="1" ind2="3" >
-                <marc:subfield code="a"><xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="246" ind1="1" ind2="3" >
+                <subfield code="a"><xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
@@ -886,65 +928,65 @@
         <xsl:variable name="verlag" select="DetailData/DataElement[@ElementName='Vertrieb/Verlag']/ElementValue/TextValue/text()"/>
         <xsl:variable name="zeit" select="DetailData/DataElement[@ElementName='Entstehungszeitraum']/ElementValue/DateRange/TextRepresentation/text()"/>
         
-        <marc:datafield tag="260" ind1=" " ind2=" ">
+        <datafield tag="260" ind1=" " ind2=" ">
             <xsl:choose>
                 <xsl:when test="DetailData/DataElement[@ElementName='Verlag']">
                     <xsl:choose>
                         <xsl:when test="$kOrt">
-                            <marc:subfield code="a"><xsl:value-of select="$kOrt"/></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$kOrt"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="a">[s.l.]</marc:subfield>
+                            <subfield code="a">[s.l.]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:choose>
                         <xsl:when test="$kVerlag">
-                            <marc:subfield code="b"><xsl:value-of select="$kVerlag"/></marc:subfield>
+                            <subfield code="b"><xsl:value-of select="$kVerlag"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="b">[s.n.]</marc:subfield>
+                            <subfield code="b">[s.n.]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:choose>
                         <xsl:when test="$kJahr">
-                            <marc:subfield code="c"><xsl:value-of select="$kJahr"/></marc:subfield>
+                            <subfield code="c"><xsl:value-of select="$kJahr"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="c">[unbekannt]</marc:subfield>
+                            <subfield code="c">[unbekannt]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:when>
                 <xsl:when test="$ort | $verlag | $zeit">
                     <xsl:choose>
                         <xsl:when test="$ort">
-                            <marc:subfield code="a"><xsl:value-of select="$ort"/></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$ort"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="a">[s.l.]</marc:subfield>
+                            <subfield code="a">[s.l.]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:choose>
                         <xsl:when test="$verlag">
-                            <marc:subfield code="b"><xsl:value-of select="$verlag"/></marc:subfield>
+                            <subfield code="b"><xsl:value-of select="$verlag"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="b">[s.n.]</marc:subfield>
+                            <subfield code="b">[s.n.]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                     <xsl:choose>
                         <xsl:when test="$zeit">
-                            <marc:subfield code="c"><xsl:value-of select="$zeit"/></marc:subfield>
+                            <subfield code="c"><xsl:value-of select="$zeit"/></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="c">[unbekannt]</marc:subfield>
+                            <subfield code="c">[unbekannt]</subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:when>
                 <xsl:otherwise>
-                    <marc:subfield code="c">[unbekannt]</marc:subfield>
+                    <subfield code="c">[unbekannt]</subfield>
                 </xsl:otherwise>
             </xsl:choose>
-        </marc:datafield>
+        </datafield>
     </xsl:template>
         
     <!-- MARC-Feld: 300 -->
@@ -953,49 +995,49 @@
     <xsl:if test="DetailData/DataElement[@ElementName='Umfang (Text)'] | DetailData/DataElement[@ElementName='Umfang (Laufmeter)']">
         <xsl:variable name="txt" select="DetailData/DataElement[@ElementName='Umfang (Text)']/ElementValue[@Sequence='1']/TextValue/text()" />
         <xsl:variable name="lfm" select="DetailData/DataElement[@ElementName='Umfang (Laufmeter)']/ElementValue/FloatValue/text()" />
-        <marc:datafield tag="300" ind1=" " ind2=" " >
+        <datafield tag="300" ind1=" " ind2=" " >
             <xsl:choose>
                 <xsl:when test="fn:string-length($txt) &gt; 0 and fn:string-length($lfm) &gt; 0">
-                    <marc:subfield code="a"><xsl:value-of select="$txt" /></marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="$lfm" /></marc:subfield>
-                    <marc:subfield code="f"><xsl:text>Laufmeter</xsl:text></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$txt" /></subfield>
+                    <subfield code="a"><xsl:value-of select="$lfm" /></subfield>
+                    <subfield code="f"><xsl:text>Laufmeter</xsl:text></subfield>
                 </xsl:when>
                 <xsl:when test="fn:string-length($lfm) &gt; 0">
-                    <marc:subfield code="a"><xsl:value-of select="$lfm" /></marc:subfield>
-                    <marc:subfield code="f"><xsl:text>Laufmeter</xsl:text></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$lfm" /></subfield>
+                    <subfield code="f"><xsl:text>Laufmeter</xsl:text></subfield>
                 </xsl:when>
                 <xsl:when test="fn:string-length($txt) &gt; 0">
-                    <marc:subfield code="a"><xsl:value-of select="$txt" /></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$txt" /></subfield>
                 </xsl:when>
             </xsl:choose>
-        </marc:datafield>
+        </datafield>
     </xsl:if>
         <!-- Dossier -->
     <xsl:if test="DetailData/DataElement[@ElementName='Anzahl beschriebene Seiten'] | DetailData/DataElement[@ElementName='Diverse'] | DetailData/DataElement[@ElementName='Anzahl Fotografien (Positive)']">
         <xsl:variable name="abs" select="DetailData/DataElement[@ElementName='Anzahl beschriebene Seiten']/ElementValue/TextValue/text()" />
         <xsl:variable name="div" select="DetailData/DataElement[@ElementName='Diverse']/ElementValue/FloatValue/text()" />
         <xsl:variable name="pht" select="DetailData/DataElement[@ElementName='Anzahl Fotografien (Positive)']/ElementValue/FloatValue/text()" />
-        <marc:datafield tag="300" ind1=" " ind2=" " >
+        <datafield tag="300" ind1=" " ind2=" " >
             <xsl:choose>
                 <xsl:when test="$abs and $div">
-                    <marc:subfield code="a"><xsl:value-of select="$abs" /></marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="$div" /></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$abs" /></subfield>
+                    <subfield code="a"><xsl:value-of select="$div" /></subfield>
                 </xsl:when>
                 <xsl:when test="$pht">
-                    <marc:subfield code="a"><xsl:value-of select="$abs" /></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$abs" /></subfield>
                 </xsl:when>
                 <xsl:otherwise>
                     <xsl:choose>
                         <xsl:when test="$abs">
-                            <marc:subfield code="a"><xsl:value-of select="$abs" /></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$abs" /></subfield>
                         </xsl:when>
                         <xsl:when test="div">
-                            <marc:subfield code="a"><xsl:value-of select="$div" /></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$div" /></subfield>
                         </xsl:when>
                     </xsl:choose>
                 </xsl:otherwise>
             </xsl:choose>
-        </marc:datafield>
+        </datafield>
     </xsl:if>
         <!-- Dokument Foto -->
     <xsl:if test="DetailData/DataElement[@ElementName='Effektive Masse Bild'] or (DetailData/DataElement[@ElementName='Archivalienart'] and DetailData/DataElement[@ElementName='Farbe'])">
@@ -1004,17 +1046,17 @@
         <xsl:variable name="bildmasse" select="DetailData/DataElement[@ElementName='Standard Bildformat']/ElementValue/TextValue/text()"/>
         
         <xsl:if test="$archivalienart | $farbe | $bildmasse">
-         <marc:datafield tag="300" ind1=" " ind2=" " >
+         <datafield tag="300" ind1=" " ind2=" " >
             <xsl:if test="$archivalienart">
-                <marc:subfield code="a"><xsl:value-of select="$archivalienart" /></marc:subfield>
+                <subfield code="a"><xsl:value-of select="$archivalienart" /></subfield>
             </xsl:if>
             <xsl:if test="$farbe">
-                <marc:subfield code="b"><xsl:value-of select="$farbe" /></marc:subfield>
+                <subfield code="b"><xsl:value-of select="$farbe" /></subfield>
             </xsl:if>
             <xsl:if test="$bildmasse">
-                <marc:subfield code="c"><xsl:value-of select="$bildmasse" /></marc:subfield>
+                <subfield code="c"><xsl:value-of select="$bildmasse" /></subfield>
             </xsl:if>
-         </marc:datafield>
+         </datafield>
         </xsl:if>
     </xsl:if>
         <!-- Dokument Bild -->
@@ -1024,35 +1066,35 @@
         <xsl:variable name="bildmasse" select="DetailData/DataElement[@ElementName='Effektive Masse Bild']/ElementValue/TextValue/text()"/>
         
         <xsl:if test="$archivalienart | $technik | $bildmasse">
-         <marc:datafield tag="300" ind1=" " ind2=" " >
+         <datafield tag="300" ind1=" " ind2=" " >
             <xsl:choose>
                 <xsl:when test="$technik">
                     <xsl:choose>
                         <xsl:when test="fn:contains($technik,', ')">
                             <xsl:variable name="sfa" select="fn:substring-before($technik,', ')"/>
                             <xsl:variable name="sfb" select="fn:substring-after($technik,', ')"/>
-                            <marc:subfield code="a"><xsl:value-of select="$sfa" /></marc:subfield>
-                            <marc:subfield code="b"><xsl:value-of select="$sfb" /></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$sfa" /></subfield>
+                            <subfield code="b"><xsl:value-of select="$sfb" /></subfield>
                         </xsl:when>
                         <xsl:when test="fn:contains($technik,'; ')">
                             <xsl:variable name="sfa" select="fn:substring-before($technik,'; ')"/>
                             <xsl:variable name="sfb" select="fn:substring-after($technik,'; ')"/>
-                            <marc:subfield code="a"><xsl:value-of select="$sfa" /></marc:subfield>
-                            <marc:subfield code="b"><xsl:value-of select="$sfb" /></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$sfa" /></subfield>
+                            <subfield code="b"><xsl:value-of select="$sfb" /></subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="a"><xsl:value-of select="$technik" /></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="$technik" /></subfield>
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:when>
                 <xsl:when test="$archivalienart">
-                    <marc:subfield code="a"><xsl:value-of select="$archivalienart" /></marc:subfield>
+                    <subfield code="a"><xsl:value-of select="$archivalienart" /></subfield>
                 </xsl:when>
             </xsl:choose>
             <xsl:if test="$bildmasse">
-                <marc:subfield code="c"><xsl:value-of select="$bildmasse" /></marc:subfield>
+                <subfield code="c"><xsl:value-of select="$bildmasse" /></subfield>
             </xsl:if>
-         </marc:datafield>
+         </datafield>
         </xsl:if>
     </xsl:if>
         <!-- Dokument Text-->
@@ -1062,60 +1104,33 @@
         <xsl:variable name="kmasse" select="fn:substring-after(DetailData/DataElement[@ElementName='Kollation']/ElementValue[@Sequence='1']/TextValue/text(), ' ; ')" />
         
         <xsl:if test="fn:string-length($kseite) &gt; 0 or fn:string-length($kill) &gt; 0 or fn:string-length($kmasse) &gt; 0">
-         <marc:datafield tag="300" ind1=" " ind2=" " >
+         <datafield tag="300" ind1=" " ind2=" " >
             <xsl:if test="fn:string-length($kseite) &gt; 0">
-                <marc:subfield code="a"><xsl:value-of select="$kseite" /></marc:subfield>
+                <subfield code="a"><xsl:value-of select="$kseite" /></subfield>
             </xsl:if>
             <xsl:if test="fn:string-length($kill) &gt; 0">
-                <marc:subfield code="b"><xsl:value-of select="$kill" /></marc:subfield>
+                <subfield code="b"><xsl:value-of select="$kill" /></subfield>
             </xsl:if>
             <xsl:if test="fn:string-length($kmasse) &gt; 0">
-                <marc:subfield code="c"><xsl:value-of select="$kmasse" /></marc:subfield>
+                <subfield code="c"><xsl:value-of select="$kmasse" /></subfield>
             </xsl:if>
-         </marc:datafield>
+         </datafield>
         </xsl:if>
     </xsl:if>
     </xsl:template>
     
     <!-- MARC-Feld 351 -->
     <xsl:template name="cdF351">
-        <marc:datafield tag="351" ind1=" " ind2=" ">
-            <marc:subfield code="c">
+        <datafield tag="351" ind1=" " ind2=" ">
+            <subfield code="c">
                 <xsl:value-of select="@Level"/>
-            </marc:subfield>
-        </marc:datafield>
+            </subfield>
+        </datafield>
     </xsl:template>
     
-    <!-- Linking Marc-Feld: 490 / 775 / 830 -->
+    <!-- Linking Marc-Feld: 490 / 775 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 779 -->
     <!-- ACHTUNG: Das Linking ist komplett an swissbib angepasst und entspricht nicht den Gepflogenheiten von MARC21 -->
     <xsl:template name="Linking">
-        <xsl:variable name="cdF830w">
-            <xsl:variable name="parentid" select="@ParentId" />
-            <xsl:variable name="recordid" select="parent::node()/attribute::Id" />
-            <xsl:choose>
-                <xsl:when test="$parentid = $recordid">
-                    <xsl:value-of select="$recordid" />
-                </xsl:when>
-                <xsl:otherwise>
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
-        <xsl:variable name="cdF490a">
-            <xsl:choose>
-                <xsl:when test="DetailData/DataElement[@ElementName='Titel der Serie']">
-                    <xsl:value-of select="DetailData/DataElement/ElementValue/TextValue/text()" />
-                </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
-                    <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
-                </xsl:when>
-                <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
-                    <xsl:value-of select="parent::node()/attribute::IdName" />
-                </xsl:when>
-                <xsl:otherwise>
-                    <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
-                </xsl:otherwise>
-            </xsl:choose>
-        </xsl:variable>
         <xsl:variable name="parentLevel">
             <xsl:choose>
                 <xsl:when test="parent::node()/attribute::Level">
@@ -1125,117 +1140,234 @@
                 </xsl:otherwise>
             </xsl:choose>
         </xsl:variable>
+        <xsl:choose>
+            <xsl:when test="$level='BESTAND'">
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="parent::node()/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:if test="$cdF490a != ''">
+                    <datafield tag="490" ind1="1" ind2=" " >
+                        <subfield code="a"><xsl:value-of select="$cdF490a"/></subfield>
+                    </datafield>
+                </xsl:if>
+            </xsl:when>
+            <xsl:when test="$level='DOK'">
+                <xsl:variable name="cdF490v" select="fn:substring-before(./@IdName, '   ')" />
+                <xsl:variable name="cdF830w" select="root(.)/ExportRoot/Record/attribute::Id" />
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="fn:contains(root(.)/ExportRoot/Record/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(root(.)/ExportRoot/Record/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(root(.)/ExportRoot/Record/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="root(.)/ExportRoot/Record/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(root(.)/ExportRoot/Record/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <datafield tag="779" ind1="1" ind2=" " >
+                    <subfield code="a"><xsl:value-of select="$cdF490a"/></subfield>
+                    <xsl:if test="$cdF490v !=''">
+                        <subfield code="v"><xsl:value-of select="$cdF490v"/></subfield>
+                    </xsl:if>
+                    <xsl:if test="$cdF830w !=''">
+                        <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                        <subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                    </xsl:if>
+                </datafield>
+                <!-- Related Document-->
+                <xsl:variable name="recid" select="../@Id"/>
+                <xsl:variable name="parentid" select="@ParentId"/>
+                <xsl:variable name="levl" select="../@Level"/>
+                <xsl:if test="($recid = $parentid) and $levl = 'Dokument'">
+                    <xsl:variable name="rectitle" select="fn:substring-after(../attribute::IdName, '   ')" />
+                    <datafield tag="775" ind1="0" ind2="8" >
+                        <subfield code="a"><xsl:value-of select="$rectitle"/></subfield>
+                        <xsl:choose>
+                            <xsl:when test="$parentid !=''">
+                                <subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$parentid"/></subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </datafield>
+                </xsl:if>
+                
+            </xsl:when>
+            <xsl:when test="ALL">
+                <xsl:variable name="cdF830w">
+                    <xsl:variable name="parentid" select="@ParentId" />
+                    <xsl:variable name="recordid" select="parent::node()/attribute::Id" />
+                    <xsl:choose>
+                        <xsl:when test="$parentid = $recordid">
+                            <xsl:value-of select="$recordid" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
+                <xsl:variable name="cdF490a">
+                    <xsl:choose>
+                        <xsl:when test="DetailData/DataElement[@ElementName='Titel der Serie']">
+                            <xsl:value-of select="DetailData/DataElement/ElementValue/TextValue/text()" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, '   ')">
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:when>
+                        <xsl:when test="fn:contains(parent::node()/attribute::IdName, 'EAD-')">
+                            <xsl:value-of select="parent::node()/attribute::IdName" />
+                        </xsl:when>
+                        <xsl:otherwise>
+                            <xsl:value-of select="fn:substring-after(parent::node()/attribute::IdName, '   ')" />
+                        </xsl:otherwise>
+                    </xsl:choose>
+                </xsl:variable>
         
-        <xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and ($parentLevel='Sammlungseinheit' or $parentLevel='Serie' or $parentLevel='Bestand' or $parentLevel='Dossier'))">
-            <marc:datafield tag="490" ind1="1" ind2=" " >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                        <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield>
-           <!-- <marc:datafield tag="830" ind1=" " ind2="0" >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield> -->
-        </xsl:if>
-        <xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and $parentLevel='Dokument')">
-            <marc:datafield tag="775" ind1="0" ind2="8" >
-                <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                <xsl:choose>
-                    <xsl:when test="$cdF830w !=''">
-                        <marc:subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:when>
-                </xsl:choose>
-            </marc:datafield>
-        </xsl:if>
+                <!-- xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and ($parentLevel='Sammlungseinheit' or $parentLevel='Serie' or $parentLevel='Bestand' or $parentLevel='Dossier'))" -->
+                <xsl:if test="$cdF490a != ''">
+                    <datafield tag="779" ind1="1" ind2=" " >
+                        <subfield code="a"><xsl:value-of select="$cdF490a"/></subfield>
+                        <xsl:choose>
+                            <xsl:when test="$cdF830w != ''">
+                                <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                                <subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </datafield>
+                   <!-- <datafield tag="830" ind1=" " ind2="0" >
+                        <subfield code="a"><xsl:value-of select="$cdF490a"/></subfield>
+                        <xsl:choose>
+                            <xsl:when test="$cdF830w !=''">
+                                <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                            </xsl:when>
+                        </xsl:choose>
+                    </datafield> -->
+                </xsl:if>
+            </xsl:when>
+        </xsl:choose>
     </xsl:template>
     
     <!-- MARC-Feld 500 -->
     <xsl:template match="DataElement[@ElementName='Titel (Variante) Spezifikation -  Art und Quelle']/ElementValue/TextValue/text()">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="500" ind1=" " ind2=" " >
-                <marc:subfield code="a"><xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="500" ind1=" " ind2=" " >
+                <subfield code="a"><xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Orientierung und Form']">
-        <marc:datafield tag="500" ind1=" " ind2=" " >
-            <marc:subfield code="a"><xsl:text>Orientierung und Form: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
-        </marc:datafield>
+        <datafield tag="500" ind1=" " ind2=" " >
+            <subfield code="a"><xsl:text>Orientierung und Form: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()" /></subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Verwandtes Material']">
-        <marc:datafield tag="500" ind1=" " ind2=" " >
-            <marc:subfield code="a">Verwandtes Material: <xsl:value-of select="ElementValue/TextValue/text()" /></marc:subfield>
-        </marc:datafield>
+        <datafield tag="500" ind1=" " ind2=" " >
+            <subfield code="a"><xsl:text>Verwandtes Material: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template> 
     
     <!-- MARC-Feld 506 --> 
     <xsl:template match="DataElement[@ElementName='Zugangsbedingungen']">
-        <marc:datafield tag="506" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="506" ind1=" " ind2=" ">
+            <subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
+        </datafield>
     </xsl:template>
     
     <!-- MARC-Feld 510 -->
     <xsl:template match="DataElement[@ElementName='Kurzbeschreibung/ElementValue/TextValue/text()']">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="510" ind1=" " ind2=" ">
-                <marc:subfield code="a"><xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="510" ind1=" " ind2=" ">
+                <subfield code="a"><xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
     <!-- MARC-Feld 516 -->
     <xsl:template match="DataElement[@ElementName='Digitales Fileformat']">
-        <marc:datafield tag="516" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="516" ind1=" " ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <!-- MARC-Feld 520 --> 
     <xsl:template match="DataElement[@ElementName='Kurzbeschreibung']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1="3" ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bemerkung zur Kurzbeschreibung']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1="3" ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Inhalt']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1="3" ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bestandsbeschreibung']">
-        <marc:datafield tag="520" ind1="2" ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1="2" ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Stichwort']">
-        <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1=" " ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Darin']">
-        <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="520" ind1=" " ind2=" ">
+            <subfield code="a">
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <!-- MARC-Feld 542 -->
@@ -1245,37 +1377,49 @@
         <xsl:variable name="PartUrheberrechtsInhaber" select="DetailData/DataElement[@ElementName='Partnerangaben Urheberrechts-Inhaber']/ElementValue/TextValue/text()"/>
 
             <xsl:if test="fn:string-length($UrheberrechtsInhaber) &gt; 0 or fn:string-length($BemUrheberrechtsInhaber) &gt; 0 or fn:string-length($PartUrheberrechtsInhaber) &gt; 0">
-                <marc:datafield tag="542" ind1=" " ind2=" ">
+                <datafield tag="542" ind1=" " ind2=" ">
                 <xsl:if test="fn:string-length($UrheberrechtsInhaber) &gt; 0">
-                    <marc:subfield code="d"><xsl:value-of select="$UrheberrechtsInhaber"/></marc:subfield>
+                    <subfield code="d"><xsl:value-of select="$UrheberrechtsInhaber"/></subfield>
                 </xsl:if>
                 <xsl:if test="fn:string-length($PartUrheberrechtsInhaber) &gt; 0">
-                    <marc:subfield code="e"><xsl:value-of select="$PartUrheberrechtsInhaber"/></marc:subfield>
+                    <subfield code="e"><xsl:value-of select="$PartUrheberrechtsInhaber"/></subfield>
                 </xsl:if>
                 <xsl:if test="fn:string-length($BemUrheberrechtsInhaber) &gt; 0">
-                    <marc:subfield code="n"><xsl:value-of select="$BemUrheberrechtsInhaber"/></marc:subfield>
+                    <subfield code="n"><xsl:value-of select="$BemUrheberrechtsInhaber"/></subfield>
                 </xsl:if>
-                </marc:datafield>
+                </datafield>
             </xsl:if>
     </xsl:template>
 
     <!-- MARC-Feld 561 --> 
     <xsl:template match="DataElement[@ElementName='Art des Bestands']">
-        <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Bestands: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="561" ind1=" " ind2=" ">
+            <subfield code="a"><xsl:text>Art des Bestands: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Art des Erwerbs']">
-        <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="561" ind1=" " ind2=" ">
+            <subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bestandsgeschichte']">
-        <marc:datafield tag="561" ind1=" " ind2=" ">
-            <marc:subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-        </marc:datafield>
+        <datafield tag="561" ind1=" " ind2=" ">
+            <subfield code="a"><xsl:text>Art des Erwerbs: </xsl:text>
+                <xsl:for-each select="ElementValue/TextValue/text()">
+                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                </xsl:for-each>
+            </subfield>
+        </datafield>
     </xsl:template>
 
     <!-- MARC-Feld 562 -->
@@ -1285,67 +1429,67 @@
         <xsl:variable name="BemUnterschrift" select="DetailData/DataElement[@ElementName='Bemerkung zur Unterschrift - Legende']/ElementValue/TextValue/text()"/>
 
             <xsl:if test="DetailData/DataElement[@ElementName='Beschriftung - Legende'] | $BemBeschriftung | $Unterschrift | $BemUnterschrift">
-                <marc:datafield tag="562" ind1=" " ind2=" ">
+                <datafield tag="562" ind1=" " ind2=" ">
                 <xsl:if test="DetailData/DataElement[@ElementName='Beschriftung - Legende']">
                     <xsl:for-each select="DetailData/DataElement[@ElementName='Beschriftung - Legende']/ElementValue">
-                        <marc:subfield code="c"><xsl:value-of select="TextValue/text()"/></marc:subfield>
+                        <subfield code="c"><xsl:value-of select="TextValue/text()"/></subfield>
                     </xsl:for-each>
                 </xsl:if>
                 <xsl:if test="$BemBeschriftung">
-                    <marc:subfield code="c"><xsl:value-of select="$BemBeschriftung"/></marc:subfield>
+                    <subfield code="c"><xsl:value-of select="$BemBeschriftung"/></subfield>
                 </xsl:if>
                 <xsl:if test="$Unterschrift">
-                    <marc:subfield code="c"><xsl:value-of select="$Unterschrift"/></marc:subfield>
+                    <subfield code="c"><xsl:value-of select="$Unterschrift"/></subfield>
                 </xsl:if>
                 <xsl:if test="$BemUnterschrift">
-                    <marc:subfield code="c"><xsl:value-of select="$BemUnterschrift"/></marc:subfield>
+                    <subfield code="c"><xsl:value-of select="$BemUnterschrift"/></subfield>
                 </xsl:if>
-                </marc:datafield>
+                </datafield>
             </xsl:if>
     </xsl:template>
     
     <!-- MARC-Feld 581 -->
     <xsl:template match="DataElement[@ElementName='Literaturangabe']/ElementValue/TextValue/text()">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="581" ind1="8" ind2=" ">
-                <marc:subfield code="a">Literaturangabe: <xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="581" ind1="8" ind2=" ">
+                <subfield code="a">Literaturangabe: <xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Publikationen']/ElementValue/TextValue/text()">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="581" ind1="8" ind2=" ">
-                <marc:subfield code="a">Veröffentlichung: <xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="581" ind1="8" ind2=" ">
+                <subfield code="a">Veröffentlichung: <xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
     <!-- MARC-Feld 585 -->
     <xsl:template match="DataElement[@ElementName='Präsentation in Ausstellungen']/ElementValue/TextValue/text()">
         <xsl:for-each select="tokenize(., '\n\r?')[.]">
-            <marc:datafield tag="585" ind1=" " ind2=" ">
-                <marc:subfield code="a">Präsentation in Ausstellung: <xsl:sequence select="."></xsl:sequence></marc:subfield>
-            </marc:datafield>
+            <datafield tag="585" ind1=" " ind2=" ">
+                <subfield code="a">Präsentation in Ausstellung: <xsl:sequence select="."></xsl:sequence></subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
     <!-- MARC-Feld 595 -->
     <xsl:template match="DataElement[@ElementName='Koordinaten X']">
 
-        <marc:datafield tag="595" ind1=" " ind2=" " >
-            <marc:subfield code="d"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-            <marc:subfield code="e"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
+        <datafield tag="595" ind1=" " ind2=" " >
+            <subfield code="d"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
+            <subfield code="e"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
             <xsl:if test="following-sibling::DataElement[@ElementName='Koordinaten Y']/ElementValue/TextValue/text()">
-                <marc:subfield code="f"><xsl:value-of select="following-sibling::DataElement[@ElementName='Koordinaten Y']/ElementValue/TextValue/text()"/></marc:subfield>
-                <marc:subfield code="g"><xsl:value-of select="following-sibling::DataElement[@ElementName='Koordinaten Y']/ElementValue/TextValue/text()"/></marc:subfield>
+                <subfield code="f"><xsl:value-of select="following-sibling::DataElement[@ElementName='Koordinaten Y']/ElementValue/TextValue/text()"/></subfield>
+                <subfield code="g"><xsl:value-of select="following-sibling::DataElement[@ElementName='Koordinaten Y']/ElementValue/TextValue/text()"/></subfield>
                 
             </xsl:if>
             <!-- 
-            <marc:subfield code="f">???</marc:subfield>
-            <marc:subfield code="g">???</marc:subfield>
+            <subfield code="f">???</subfield>
+            <subfield code="g">???</subfield>
             -->
-        </marc:datafield>
+        </datafield>
     </xsl:template>
 
     <!-- MARC-Feld 7x0 und begrenzt 690 -->
@@ -1364,14 +1508,14 @@
                         <xsl:analyze-string select="$koerperschaftvalue" regex="(Körperschaften\\[A-Z]\\)(.*)(\))">
                             <xsl:matching-substring>
                                 <xsl:variable name="part1" select="regex-group(2)"/>
-                                <marc:datafield tag="690" ind1=" " ind2="7">
-                                    <marc:subfield code="B">b</marc:subfield>
-                                    <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
+                                <datafield tag="690" ind1=" " ind2="7">
+                                    <subfield code="B">b</subfield>
+                                    <subfield code="a"><xsl:value-of select="normalize-space($part1)"/></subfield>
                                     <xsl:if test="fn:string-length($relator) != 0">
-                                        <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                        <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                     </xsl:if>
-                                    <marc:subfield code="2">CHARCH</marc:subfield>
-                                </marc:datafield>
+                                    <subfield code="2">CHARCH</subfield>
+                                </datafield>
                             </xsl:matching-substring>
                         </xsl:analyze-string>
                     </xsl:when>
@@ -1381,15 +1525,15 @@
                             <xsl:matching-substring>
                                 <xsl:variable name="part1" select="regex-group(2)"/>
                                 <xsl:variable name="part2" select="regex-group(3)"/>
-                                    <marc:datafield tag="690" ind1=" " ind2="7">
-                                        <marc:subfield code="B">p</marc:subfield>
-                                        <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
-                                        <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
+                                    <datafield tag="690" ind1=" " ind2="7">
+                                        <subfield code="B">p</subfield>
+                                        <subfield code="a"><xsl:value-of select="normalize-space($part1)"/></subfield>
+                                        <subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></subfield>
                                         <xsl:if test="fn:string-length($relator) != 0">
-                                            <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                            <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                         </xsl:if>
-                                        <marc:subfield code="2">CHARCH</marc:subfield>
-                                    </marc:datafield>
+                                        <subfield code="2">CHARCH</subfield>
+                                    </datafield>
                             </xsl:matching-substring>
                         </xsl:analyze-string>
                     </xsl:when>
@@ -1475,13 +1619,13 @@
                                     <xsl:matching-substring>
                                         <xsl:variable name="part1" select="regex-group(2)"/>
                                         <xsl:variable name="part2" select="regex-group(3)"/>
-                                        <marc:datafield tag="710"  ind1="1" ind2=" "  >
-                                            <marc:subfield code="a"><xsl:value-of select="fn:translate($part1,' .()','')"/></marc:subfield>
-                                            <marc:subfield code="b"><xsl:value-of select="normalize-space($part2)"/></marc:subfield>
+                                        <datafield tag="710"  ind1="1" ind2=" "  >
+                                            <subfield code="a"><xsl:value-of select="fn:translate($part1,' .()','')"/></subfield>
+                                            <subfield code="b"><xsl:value-of select="normalize-space($part2)"/></subfield>
                                             <xsl:if test="fn:string-length($relator) != 0">
-                                                <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                                <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                             </xsl:if>
-                                        </marc:datafield>
+                                        </datafield>
                                     </xsl:matching-substring>
                                 </xsl:analyze-string>
                             </xsl:when>
@@ -1490,24 +1634,24 @@
                                     <xsl:matching-substring>
                                         <xsl:variable name="part1" select="regex-group(2)"/>
                                         <xsl:variable name="part2" select="regex-group(3)"/>
-                                        <marc:datafield tag="710" ind1="2" ind2=" ">
-                                            <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
-                                            <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
+                                        <datafield tag="710" ind1="2" ind2=" ">
+                                            <subfield code="a"><xsl:value-of select="normalize-space($part1)"/></subfield>
+                                            <subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></subfield>
                                             <xsl:if test="fn:string-length($relator) != 0">
-                                                <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                                <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                             </xsl:if>
-                                        </marc:datafield>
+                                        </datafield>
                                     </xsl:matching-substring>
                                 </xsl:analyze-string>
                                 <xsl:analyze-string select="$koerperschaftvalue" regex="(Körperschaften\\[A-Z]\\)(.*)(\))">
                                     <xsl:matching-substring>
                                         <xsl:variable name="part1" select="regex-group(2)"/>
-                                        <marc:datafield tag="710" ind1="2" ind2=" ">
-                                            <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
+                                        <datafield tag="710" ind1="2" ind2=" ">
+                                            <subfield code="a"><xsl:value-of select="normalize-space($part1)"/></subfield>
                                             <xsl:if test="fn:string-length($relator) != 0">
-                                                <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                                <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                             </xsl:if>
-                                        </marc:datafield>
+                                        </datafield>
                                     </xsl:matching-substring>
                                 </xsl:analyze-string>
                             </xsl:otherwise>
@@ -1536,23 +1680,23 @@
                                     <xsl:when test="fn:contains($part1,',')">">
                                         <xsl:variable name="nn" select="fn:substring-before($part1,',')"/>
                                         <xsl:variable name="vn" select="fn:substring-after($part1,',')"/>
-                                        <marc:datafield tag="700" ind1="1" ind2=" ">
-                                            <marc:subfield code="a"><xsl:value-of select="normalize-space($nn)"/></marc:subfield>
-                                            <marc:subfield code="D"><xsl:value-of select="normalize-space($vn)"/></marc:subfield>
-                                            <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
+                                        <datafield tag="700" ind1="1" ind2=" ">
+                                            <subfield code="a"><xsl:value-of select="normalize-space($nn)"/></subfield>
+                                            <subfield code="D"><xsl:value-of select="normalize-space($vn)"/></subfield>
+                                            <subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></subfield>
                                             <xsl:if test="fn:string-length($relator) != 0">
-                                                <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                                <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                             </xsl:if>
-                                        </marc:datafield>
+                                        </datafield>
                                     </xsl:when>
                                     <xsl:otherwise>
-                                        <marc:datafield tag="700" ind1="1" ind2=" ">
-                                            <marc:subfield code="a"><xsl:value-of select="normalize-space($part1)"/></marc:subfield>
-                                            <marc:subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></marc:subfield>
+                                        <datafield tag="700" ind1="1" ind2=" ">
+                                            <subfield code="a"><xsl:value-of select="normalize-space($part1)"/></subfield>
+                                            <subfield code="d"><xsl:value-of select="fn:translate($part2,' ()','')"/></subfield>
                                             <xsl:if test="fn:string-length($relator) != 0">
-                                                <marc:subfield code="4"><xsl:value-of select="$relator"/></marc:subfield>
+                                                <subfield code="4"><xsl:value-of select="$relator"/></subfield>
                                             </xsl:if>
-                                        </marc:datafield>
+                                        </datafield>
                                     </xsl:otherwise>
                                 </xsl:choose>
                             </xsl:matching-substring>
@@ -1566,10 +1710,10 @@
             <!--xsl:analyze-string select="$ddc" regex="(^(\d\d\d\.?\d?\d?)( .*))"-->
             <xsl:analyze-string select="$ddc" regex="(^([1-9][0-9][0-9]\.?[0-9]?[0-9]?[ ])([a-z]*))">
                 <xsl:matching-substring>
-                    <marc:datafield tag="083" ind1="0" ind2=" " >
-                        <marc:subfield code="a"><xsl:value-of select="normalize-space(regex-group(2))"/></marc:subfield>
-                        <marc:subfield code="2">23</marc:subfield>
-                    </marc:datafield>
+                    <datafield tag="083" ind1="0" ind2=" " >
+                        <subfield code="a"><xsl:value-of select="normalize-space(regex-group(2))"/></subfield>
+                        <subfield code="2">23</subfield>
+                    </datafield>
                 </xsl:matching-substring>
             </xsl:analyze-string>
         </xsl:if>
@@ -1578,11 +1722,11 @@
     <!-- MARC-Feld 690 -->
     <xsl:template match="DataElement[@ElementName='VE-Objekt']">
         <xsl:for-each select="ElementValue/TextValue">
-            <marc:datafield tag="690" ind1=" " ind2="7" >
-                <marc:subfield code="B">s</marc:subfield>
-                <marc:subfield code="a"><xsl:value-of select="./text()"/></marc:subfield>
-                <marc:subfield code="2">CHARCH</marc:subfield>
-            </marc:datafield>
+            <datafield tag="690" ind1=" " ind2="7" >
+                <subfield code="B">s</subfield>
+                <subfield code="a"><xsl:value-of select="./text()"/></subfield>
+                <subfield code="2">CHARCH</subfield>
+            </datafield>
         </xsl:for-each>
     </xsl:template>
     
@@ -1592,23 +1736,23 @@
         <xsl:choose>
             <xsl:when test="TextRepresentation/text() = 'keine Angabe'"></xsl:when>
             <xsl:otherwise>
-                <marc:datafield tag="690" ind1=" " ind2="7" >
-                    <marc:subfield code="B">z</marc:subfield>
+                <datafield tag="690" ind1=" " ind2="7" >
+                    <subfield code="B">z</subfield>
                     <xsl:choose>
                         <xsl:when test="fn:string-length(fn:translate($year1, ' +-', '')) = 4">
-                            <marc:subfield code="a"><xsl:value-of select="fn:translate($year1, ' +-', '')"/>
+                            <subfield code="a"><xsl:value-of select="fn:translate($year1, ' +-', '')"/>
                                 <xsl:if test="./ToDate/text()">
                                     <xsl:text>-</xsl:text>
                                     <xsl:value-of select="fn:translate($year2, ' +-', '')"/>
                                 </xsl:if>
-                            </marc:subfield>
+                            </subfield>
                         </xsl:when>
                         <xsl:otherwise>
-                            <marc:subfield code="a"><xsl:value-of select="./TextRepresentation"/></marc:subfield>
+                            <subfield code="a"><xsl:value-of select="./TextRepresentation"/></subfield>
                         </xsl:otherwise>
                     </xsl:choose>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
+                    <subfield code="2">CHARCH</subfield>
+                </datafield>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
@@ -1619,22 +1763,22 @@
             <xsl:when test="ElementValue/TextValue/text() = 'unbekannt'"></xsl:when>
             <xsl:when test="ElementValue/TextValue/text() = 'Unbekannt'"></xsl:when>
             <xsl:otherwise>
-                <marc:datafield tag="690" ind1=" " ind2="7" >
-                    <marc:subfield code="B">p</marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-                    <marc:subfield code="4">own</marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
+                <datafield tag="690" ind1=" " ind2="7" >
+                    <subfield code="B">p</subfield>
+                    <subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
+                    <subfield code="4">own</subfield>
+                    <subfield code="2">CHARCH</subfield>
+                </datafield>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Gemeinde']">
-        <marc:datafield tag="690" ind1=" " ind2="7" >
-            <marc:subfield code="B">g</marc:subfield>
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/><xsl:text> (Gemeinde)</xsl:text></marc:subfield>
-            <marc:subfield code="2">CHARCH</marc:subfield>
-        </marc:datafield>
+        <datafield tag="690" ind1=" " ind2="7" >
+            <subfield code="B">g</subfield>
+            <subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/><xsl:text> (Gemeinde)</xsl:text></subfield>
+            <subfield code="2">CHARCH</subfield>
+        </datafield>
     </xsl:template>
 
     <xsl:template match="DataElement[@ElementName='Ort']">
@@ -1644,9 +1788,9 @@
                 <xsl:variable name="ort" select="ElementValue/TextValue/text()"/>
                 <xsl:variable name="plz" select="preceding-sibling::DataElement[@ElementName='Postleitzahl']/ElementValue/TextValue/text()"/>
                 <xsl:variable name="strasse" select="following-sibling::DataElement[@ElementName='Strasse']/ElementValue/TextValue/text()"/>
-                <marc:datafield tag="690" ind1=" " ind2="7" >
-                    <marc:subfield code="B">g</marc:subfield>
-                    <marc:subfield code="a">
+                <datafield tag="690" ind1=" " ind2="7" >
+                    <subfield code="B">g</subfield>
+                    <subfield code="a">
                         <xsl:choose>
                             <xsl:when test="$strasse = '.'"></xsl:when>
                             <xsl:otherwise><xsl:value-of select="$strasse"/></xsl:otherwise>
@@ -1657,30 +1801,30 @@
                             <xsl:otherwise></xsl:otherwise>
                         </xsl:choose>
                         <xsl:value-of select="$plz"/><xsl:if test="$plz"><xsl:text> </xsl:text></xsl:if><xsl:value-of select="$ort"/>
-                    </marc:subfield>
-                    <marc:subfield code="2">CHARCH</marc:subfield>
-                </marc:datafield>
+                    </subfield>
+                    <subfield code="2">CHARCH</subfield>
+                </datafield>
             </xsl:when>
             <xsl:otherwise>
                 <xsl:choose>
                     <xsl:when test="ElementValue[@Sequence='2']">
                         <xsl:for-each select="ElementValue/TextValue">
-                            <marc:datafield tag="690" ind1=" " ind2="7" >
-                                <marc:subfield code="B">g</marc:subfield>
-                                <marc:subfield code="a"><xsl:value-of select="./text()"/></marc:subfield>
-                                <marc:subfield code="2">CHARCH</marc:subfield>
-                            </marc:datafield>
+                            <datafield tag="690" ind1=" " ind2="7" >
+                                <subfield code="B">g</subfield>
+                                <subfield code="a"><xsl:value-of select="./text()"/></subfield>
+                                <subfield code="2">CHARCH</subfield>
+                            </datafield>
                         </xsl:for-each>
                     </xsl:when>
                     <xsl:otherwise>
                         <xsl:if test="ElementValue/TextValue/text() = 's.l.'">
-                            <marc:datafield tag="690" ind1=" " ind2="7" >
-                                <marc:subfield code="B">g</marc:subfield>
-                                <marc:subfield code="a">
+                            <datafield tag="690" ind1=" " ind2="7" >
+                                <subfield code="B">g</subfield>
+                                <subfield code="a">
                                    <xsl:value-of select="ElementValue/TextValue/text()"/>
-                                </marc:subfield>
-                                <marc:subfield code="2">CHARCH</marc:subfield>
-                            </marc:datafield>
+                                </subfield>
+                                <subfield code="2">CHARCH</subfield>
+                            </datafield>
                         </xsl:if>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -1689,11 +1833,11 @@
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Lokalname']">
-        <marc:datafield tag="690" ind1=" " ind2="7" >
-            <marc:subfield code="B">g</marc:subfield>
-            <marc:subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-            <marc:subfield code="2">CHARCH</marc:subfield>
-        </marc:datafield>
+        <datafield tag="690" ind1=" " ind2="7" >
+            <subfield code="B">g</subfield>
+            <subfield code="a"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
+            <subfield code="2">CHARCH</subfield>
+        </datafield>
     </xsl:template>
     
     <!-- CHB-Mediencodes: Marc-Feld 898 -->
@@ -1703,35 +1847,35 @@
         <xsl:choose>
             <xsl:when test="$type = 'foto'">
                 <!-- VM020453 = Fotografie (online) und der dazu gehörende allg. Filtercode XM020400 -->
-                <marc:datafield tag="898" ind2=" " ind1=" " >
-                    <marc:subfield code="a"><xsl:text>VM020453</xsl:text></marc:subfield>
-                    <marc:subfield code="b"><xsl:text>XM020400</xsl:text></marc:subfield>
-                    <marc:subfield code="c"><xsl:text>XM020000</xsl:text></marc:subfield>
-                </marc:datafield>
+                <datafield tag="898" ind2=" " ind1=" " >
+                    <subfield code="a"><xsl:text>VM020453</xsl:text></subfield>
+                    <subfield code="b"><xsl:text>XM020400</xsl:text></subfield>
+                    <subfield code="c"><xsl:text>XM020000</xsl:text></subfield>
+                </datafield>
             </xsl:when>
             <xsl:when test="$type = 'bild'">
                 <!-- VM020353 = Bild (online) und der dazu gehörende allg. Filtercode XM020000 -->
-                <marc:datafield tag="898" ind2=" " ind1=" " >
-                    <marc:subfield code="a"><xsl:text>VM020353</xsl:text></marc:subfield>
-                    <marc:subfield code="b"><xsl:text>XM020000</xsl:text></marc:subfield>
-                    <marc:subfield code="c"><xsl:text>XM020000</xsl:text></marc:subfield>
-                </marc:datafield>
+                <datafield tag="898" ind2=" " ind1=" " >
+                    <subfield code="a"><xsl:text>VM020353</xsl:text></subfield>
+                    <subfield code="b"><xsl:text>XM020000</xsl:text></subfield>
+                    <subfield code="c"><xsl:text>XM020000</xsl:text></subfield>
+                </datafield>
             </xsl:when>
             <xsl:when test="$type = 'monographie'">
                 <!-- BK020000 = Buch und der dazu gehörende allg. Filtercode XK020000 -->
-                <marc:datafield tag="898" ind2=" " ind1=" " >
-                    <marc:subfield code="a"><xsl:text>BK020000</xsl:text></marc:subfield>
-                    <marc:subfield code="b"><xsl:text>XK020000</xsl:text></marc:subfield>
-                    <marc:subfield code="c"><xsl:text>XK020000</xsl:text></marc:subfield>
-                </marc:datafield>
+                <datafield tag="898" ind2=" " ind1=" " >
+                    <subfield code="a"><xsl:text>BK020000</xsl:text></subfield>
+                    <subfield code="b"><xsl:text>XK020000</xsl:text></subfield>
+                    <subfield code="c"><xsl:text>XK020000</xsl:text></subfield>
+                </datafield>
             </xsl:when>
             <xsl:otherwise>
                 <!-- CL010000 = Bestand/Dossier und der dazu gehörende allg. Filtercode XL010000 -->
-                <marc:datafield tag="898" ind2=" " ind1=" " >
-                    <marc:subfield code="a"><xsl:text>CL010000</xsl:text></marc:subfield>
-                    <marc:subfield code="b"><xsl:text>XL010000</xsl:text></marc:subfield>
-                    <marc:subfield code="c"><xsl:text>XL010000</xsl:text></marc:subfield>
-                </marc:datafield>
+                <datafield tag="898" ind2=" " ind1=" " >
+                    <subfield code="a"><xsl:text>CL010000</xsl:text></subfield>
+                    <subfield code="b"><xsl:text>XL010000</xsl:text></subfield>
+                    <subfield code="c"><xsl:text>XL010000</xsl:text></subfield>
+                </datafield>
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
@@ -1742,19 +1886,19 @@
             <xsl:if test="not(../../UsageData/Accessability/text() = 'Sonderbewilligung Intranet')">
                 <xsl:variable name="recordid" select="../.././@Id"/>
                 <xsl:variable name="replacedurl" select="fn:replace($linkurl856ansichtsbild,'XXX',$recordid)"/>
-                <marc:datafield tag="856" ind1="4" ind2="2">
-                    <marc:subfield code="3">Ansichtsbild</marc:subfield>
-                    <marc:subfield code="u"><xsl:value-of select="$replacedurl"/></marc:subfield>
-                    <marc:subfield code="z">Ansichtsbild</marc:subfield>
-                </marc:datafield>
-                <marc:datafield tag="950" ind1=" " ind2=" ">
-                    <marc:subfield code="B">CHARCH</marc:subfield>
-                    <marc:subfield code="E">42</marc:subfield>
-                    <marc:subfield code="P">856</marc:subfield>
-                    <marc:subfield code="3">Ansichtsbild</marc:subfield>
-                    <marc:subfield code="u"><xsl:value-of select="$replacedurl"/></marc:subfield>
-                    <marc:subfield code="z">Ansichtsbild</marc:subfield>
-                </marc:datafield>
+                <datafield tag="856" ind1="4" ind2="2">
+                    <subfield code="3">Ansichtsbild</subfield>
+                    <subfield code="u"><xsl:value-of select="$replacedurl"/></subfield>
+                    <subfield code="z">Ansichtsbild</subfield>
+                </datafield>
+                <datafield tag="950" ind1=" " ind2=" ">
+                    <subfield code="B">CHARCH</subfield>
+                    <subfield code="E">42</subfield>
+                    <subfield code="P">856</subfield>
+                    <subfield code="3">Ansichtsbild</subfield>
+                    <subfield code="u"><xsl:value-of select="$replacedurl"/></subfield>
+                    <subfield code="z">Ansichtsbild</subfield>
+                </datafield>
             </xsl:if>
         </xsl:if>
     </xsl:template>
@@ -1764,16 +1908,16 @@
         <xsl:variable name="recordid" select="../.././@Id"/>
         <xsl:variable name="replacedurl" select="fn:replace($linkurl949y,'XXX',$recordid)"/>
 
-        <marc:datafield tag="949" ind2=" " ind1=" " >
-            <marc:subfield code="B"><xsl:text>CHARCH</xsl:text></marc:subfield>
-            <marc:subfield code="F"><xsl:value-of select="$institutioncode"/></marc:subfield>
-            <marc:subfield code="b"><xsl:value-of select="$institutioncode"/></marc:subfield>
-            <marc:subfield code="E"><xsl:value-of select="$recordid"/></marc:subfield>
-            <marc:subfield code="1">Archiv</marc:subfield> 
-            <marc:subfield code="5"><xsl:value-of select="../../UsageData/PhysicalUsability/text()" /></marc:subfield>
-            <marc:subfield code="j"><xsl:value-of select="ElementValue/TextValue/text()"/></marc:subfield>
-            <marc:subfield code="z"><xsl:value-of select="$rights949z" /></marc:subfield>
-        </marc:datafield>
+        <datafield tag="949" ind2=" " ind1=" " >
+            <subfield code="B"><xsl:text>CHARCH</xsl:text></subfield>
+            <subfield code="F"><xsl:value-of select="$institutioncode"/></subfield>
+            <subfield code="b"><xsl:value-of select="$institutioncode"/></subfield>
+            <subfield code="E"><xsl:value-of select="$recordid"/></subfield>
+            <subfield code="1">Archiv</subfield> 
+            <subfield code="5"><xsl:value-of select="../../UsageData/PhysicalUsability/text()" /></subfield>
+            <subfield code="j"><xsl:value-of select="ElementValue/TextValue/text()"/></subfield>
+            <subfield code="z"><xsl:value-of select="$rights949z" /></subfield>
+        </datafield>
     </xsl:template>
     
     <!-- MARC-Feld 956 -->
@@ -1783,14 +1927,14 @@
             <xsl:if test="not(../../UsageData/Accessability/text() = 'Sonderbewilligung Intranet')">
                 <xsl:variable name="recordid" select="../.././@Id"/>
                 <xsl:variable name="replacedurl" select="fn:replace($linkurl956vorschaubild,'XXX',$recordid)"/>
-                <marc:datafield tag="956" ind1="4" ind2=" ">
-                    <marc:subfield code="B">CHARCH</marc:subfield>
-                    <marc:subfield code="a"><xsl:value-of select="$institutioncode"/></marc:subfield>
-                    <marc:subfield code="u"><xsl:value-of select="$replacedurl"/></marc:subfield>
-                    <marc:subfield code="q">bild</marc:subfield>
-                    <marc:subfield code="x">THUMBNAIL</marc:subfield>
-                    <marc:subfield code="y">Vorschaubild</marc:subfield>
-                </marc:datafield>
+                <datafield tag="956" ind1="4" ind2=" ">
+                    <subfield code="B">CHARCH</subfield>
+                    <subfield code="a"><xsl:value-of select="$institutioncode"/></subfield>
+                    <subfield code="u"><xsl:value-of select="$replacedurl"/></subfield>
+                    <subfield code="q">bild</subfield>
+                    <subfield code="x">THUMBNAIL</subfield>
+                    <subfield code="y">Vorschaubild</subfield>
+                </datafield>
             </xsl:if>
         </xsl:if>
     </xsl:template>
