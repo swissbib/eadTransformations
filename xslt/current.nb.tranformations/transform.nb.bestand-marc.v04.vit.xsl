@@ -410,6 +410,30 @@
                              <xsl:when test="$tempPattern='exact'">
                                  <xsl:text>    </xsl:text>
                              </xsl:when>
+                             <xsl:when test="$tempPattern='before'">
+                                 <xsl:variable name="temp1stYearCreated4" select="fn:substring(DetailData/DataElement[@ElementName='Entstehungszeitraum']/ElementValue/DateRange/FromDate,2,4)"/>
+                                 <xsl:choose>
+                                     <xsl:when test="$temp1stYearCreated4=''">
+                                         <xsl:text>uuuu</xsl:text>
+                                     </xsl:when>
+                                     <xsl:otherwise>
+                                         <xsl:choose>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 3">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>u</xsl:text>
+                                             </xsl:when>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 2">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>uu</xsl:text>
+                                             </xsl:when>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 1">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>uuu</xsl:text>
+                                             </xsl:when>
+                                             <xsl:otherwise>
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of>
+                                             </xsl:otherwise>
+                                         </xsl:choose>
+                                     </xsl:otherwise>
+                                 </xsl:choose>
+                             </xsl:when>
                              <xsl:when test="$tempPattern='after' or $tempPattern='N/A' or $temp2ndYearCreated4=''">
                                  <xsl:text>uuuu</xsl:text>
                              </xsl:when>
@@ -435,6 +459,30 @@
                          <xsl:choose>
                              <xsl:when test="$tempPattern='exact'">
                                  <xsl:text>    </xsl:text>
+                             </xsl:when>
+                             <xsl:when test="$tempPattern='before'">
+                                 <xsl:variable name="temp1stYearCreated4" select="fn:substring(DetailData/DataElement[@ElementName='Entstehungszeitraum']/ElementValue/DateRange/FromDate,2,4)"/>
+                                 <xsl:choose>
+                                     <xsl:when test="$temp1stYearCreated4=''">
+                                         <xsl:text>uuuu</xsl:text>
+                                     </xsl:when>
+                                     <xsl:otherwise>
+                                         <xsl:choose>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 3">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>u</xsl:text>
+                                             </xsl:when>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 2">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>uu</xsl:text>
+                                             </xsl:when>
+                                             <xsl:when test="fn:string-length($temp1stYearCreated4) = 1">
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of><xsl:text>uuu</xsl:text>
+                                             </xsl:when>
+                                             <xsl:otherwise>
+                                                 <xsl:value-of select="$temp1stYearCreated4"></xsl:value-of>
+                                             </xsl:otherwise>
+                                         </xsl:choose>
+                                     </xsl:otherwise>
+                                 </xsl:choose>
                              </xsl:when>
                              <xsl:when test="$tempPattern='after' or $tempPattern='N/A' or $temp2ndYearCreated4=''">
                                  <xsl:text>uuuu</xsl:text>
