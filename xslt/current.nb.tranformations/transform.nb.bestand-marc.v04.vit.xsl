@@ -1177,7 +1177,7 @@
         </marc:datafield>
     </xsl:template>
     
-    <!-- Linking Marc-Feld: 490 / 775 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 779 -->
+    <!-- Linking Marc-Feld: 490 / 777 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 779 -->
     <!-- ACHTUNG: Das Linking ist komplett an swissbib angepasst und entspricht nicht den Gepflogenheiten von MARC21 -->
     <xsl:template name="Linking">
         <xsl:variable name="parentLevel">
@@ -1242,11 +1242,12 @@
                 <xsl:variable name="levl" select="../@Level"/>
                 <xsl:if test="($recid = $parentid) and $levl = 'Dokument'">
                     <xsl:variable name="rectitle" select="fn:substring-after(../attribute::IdName, '   ')" />
-                    <marc:datafield tag="775" ind1="0" ind2="8" >
+                    <marc:datafield tag="777" ind1="0" ind2=" " >
                         <marc:subfield code="a"><xsl:value-of select="$rectitle"/></marc:subfield>
                         <xsl:choose>
                             <xsl:when test="$parentid !=''">
-                                <marc:subfield code="9"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$parentid"/></marc:subfield>
+                                <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$parentid"/></marc:subfield>
+                                <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$parentid"/></marc:subfield>
                             </xsl:when>
                         </xsl:choose>
                     </marc:datafield>
