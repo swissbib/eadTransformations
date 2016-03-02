@@ -31,14 +31,22 @@
      CHARCH04: CDN - Dürrenmatt Werke
     -->
     <xsl:param name="institutioncode" select="'CHARCH01'" /> <!-- Standard, da die meisten Sammlungen aktuell von dieser Institution stammen -->
+    
     <xsl:param name="bild" select="'N'" /> <!-- Ermöglicht das Ein- und Ausblenden von URLs. Standard ist 'N', da die meisten Sammlungen nicht mit Vorschau und Ansichtsbildern geliefert werden. Ansonsten ist 'Y' zu setzen -->
     
-    <!-- Selektionscode zur Einschränkung auf Datensätze (muss mit swissbib abgesprochen werden)
+    <!-- Selektionscode zur Einschränkung auf Datensätze (muss NICHT mit swissbib abgesprochen werden)
      ALL = liefert sämtliche Ebenen
      BESTAND = liefert nur Ebene Bestand
      DOK = liefert nur Dokumente
     -->
     <xsl:param name="level" select="'BESTAND'" /> <!-- Ermöglicht die Einschränkung auf Datensätze. Standard ist 'BESTAND'. -->
+    
+    <!-- Selektionscode zur Einschränkung auf Datensätze (muss NICHT mit swissbib abgesprochen werden)
+     none = default
+     Duerrenmatt = verlinkt direkt auf die Ebene Bestand anstatt auf die Sammlungseinheit
+     Schwarzenbach = wählt nur die Photos von Annemarie Schwarzenbach aus und verlinkt direkt auf die Ebene Bestand anstatt auf die Sammlungseinheit
+    -->
+    <xsl:param name="collection" select="'none'" /> <!-- Ermöglicht die Definition von sammlungsabhängigen Ausnahmen: in 499 und bei der Wahl der Dokumente -->
     
     
     <!-- Vorschaulinks auf helveticarchives -->
@@ -125,25 +133,31 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="contains(DetailData/DataElement[@ElementName='FotografIn']/ElementValue[1]/TextValue/text(), 'Schwarzenbach') and (@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Fotografie Schwarzenbach {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                    <xsl:when test="@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']">
                         <xsl:choose>
-                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            <xsl:when test="$collection = 'Schwarzenbach'">
+                                <xsl:if test="contains(DetailData/DataElement[@ElementName='FotografIn']/ElementValue[1]/TextValue/text(), 'Schwarzenbach')">
+                                    <xsl:choose>
+                                        <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <xsl:call-template name="marcFields">
+                                                <xsl:with-param name="type" select="'foto'" />
+                                            </xsl:call-template>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
+                                </xsl:if>
                             </xsl:when>
                             <xsl:otherwise>
-                                <xsl:call-template name="marcFields">
-                                    <xsl:with-param name="type" select="'foto'" />
-                                </xsl:call-template>
-                            </xsl:otherwise>
-                        </xsl:choose>
-                    </xsl:when>
-                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']) and lower-case($institutioncode) != 'charch02'"> <!-- ACHTUNG nur solange funktional wie nur eine Fotosammlung des SLA digitalisiert ist. Dokument: Fotografie allgemein { and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
-                        <xsl:choose>
-                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
-                            </xsl:when>
-                            <xsl:otherwise>
-                                <xsl:call-template name="marcFields">
-                                    <xsl:with-param name="type" select="'foto'" />
-                                </xsl:call-template>
+                                <xsl:choose>
+                                    <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                                    </xsl:when>
+                                    <xsl:otherwise>
+                                        <xsl:call-template name="marcFields">
+                                            <xsl:with-param name="type" select="'foto'" />
+                                        </xsl:call-template>
+                                    </xsl:otherwise>
+                                </xsl:choose>
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
@@ -1205,7 +1219,7 @@
                     </xsl:choose>
                 </xsl:variable>
                 <xsl:if test="$cdF490a != ''">
-                    <marc:datafield tag="490" ind1="1" ind2=" " >
+                    <marc:datafield tag="499" ind1="1" ind2=" " >
                         <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
                     </marc:datafield>
                 </xsl:if>
@@ -1226,16 +1240,41 @@
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:variable>
-                <marc:datafield tag="779" ind1="1" ind2=" " >
-                    <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
-                    <xsl:if test="$cdF490v !=''">
-                        <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
-                    </xsl:if>
-                    <xsl:if test="$cdF830w !=''">
-                        <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                        <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
-                    </xsl:if>
-                </marc:datafield>
+                <xsl:choose>
+                    <xsl:when test="$collection = 'Schwarzenbach'">
+                        <marc:datafield tag="499" ind1="1" ind2=" " >
+                            <marc:subfield code="a"><xsl:text>Schwarzenbach, Annemarie: Inventar ihres Nachlasses im Schweizerischen Literaturarchiv (Bestand)</xsl:text></marc:subfield>
+                            <xsl:if test="$cdF490v !=''">
+                                <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
+                            </xsl:if>
+                            <marc:subfield code="w"><xsl:text>(CHARCH)cha165130</xsl:text></marc:subfield>
+                            <marc:subfield code="9"><xsl:text>cha165130</xsl:text></marc:subfield>
+                        </marc:datafield>
+                    </xsl:when>
+                    <xsl:when test="$collection = 'Duerrenmatt'">
+                        <marc:datafield tag="499" ind1="1" ind2=" " >
+                            <marc:subfield code="a"><xsl:text>Dürrenmatt, Friedrich: Nachlass Friedrich Dürrenmatt (Bestand)</xsl:text></marc:subfield>
+                            <xsl:if test="$cdF490v !=''">
+                                <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
+                            </xsl:if>
+                            <marc:subfield code="w"><xsl:text>(CHARCH)cha165042</xsl:text></marc:subfield>
+                            <marc:subfield code="9"><xsl:text>cha165042</xsl:text></marc:subfield>
+                        </marc:datafield>
+                    </xsl:when>
+                    <xsl:otherwise>
+                        <marc:datafield tag="499" ind1="1" ind2=" " >
+                            <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                            <xsl:if test="$cdF490v !=''">
+                                <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
+                            </xsl:if>
+                            <xsl:if test="$cdF830w !=''">
+                                <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                                <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                            </xsl:if>
+                        </marc:datafield>
+                    </xsl:otherwise>
+                </xsl:choose>
+                
                 <!-- Related Document-->
                 <xsl:variable name="recid" select="../@Id"/>
                 <xsl:variable name="parentid" select="@ParentId"/>
@@ -1243,7 +1282,7 @@
                 <xsl:if test="($recid = $parentid) and $levl = 'Dokument'">
                     <xsl:variable name="rectitle" select="fn:substring-after(../attribute::IdName, '   ')" />
                     <marc:datafield tag="777" ind1="0" ind2=" " >
-                        <marc:subfield code="a"><xsl:value-of select="$rectitle"/></marc:subfield>
+                        <marc:subfield code="t"><xsl:value-of select="$rectitle"/></marc:subfield>
                         <xsl:choose>
                             <xsl:when test="$parentid !=''">
                                 <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$parentid"/></marc:subfield>
@@ -1282,11 +1321,13 @@
                         </xsl:otherwise>
                     </xsl:choose>
                 </xsl:variable>
+                <xsl:variable name="cdF490v" select="fn:substring-before(./@IdName, '   ')" />
         
                 <!-- xsl:if test="((DetailData/DataElement[@ElementName='Titel der Serie'] or parent::node()/attribute::IdName) and ($parentLevel='Sammlungseinheit' or $parentLevel='Serie' or $parentLevel='Bestand' or $parentLevel='Dossier'))" -->
                 <xsl:if test="$cdF490a != ''">
-                    <marc:datafield tag="779" ind1="1" ind2=" " >
+                    <marc:datafield tag="499" ind1="1" ind2=" " >
                         <marc:subfield code="a"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                        <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
                         <xsl:choose>
                             <xsl:when test="$cdF830w != ''">
                                 <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
