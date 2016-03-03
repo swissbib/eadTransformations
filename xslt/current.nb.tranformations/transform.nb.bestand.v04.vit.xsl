@@ -1940,7 +1940,7 @@
                 <datafield tag="898" ind2=" " ind1=" " >
                     <subfield code="a"><xsl:text>VM020453</xsl:text></subfield>
                     <subfield code="b"><xsl:text>XM020400</xsl:text></subfield>
-                    <subfield code="c"><xsl:text>XM020000</xsl:text></subfield>
+                    <subfield code="c"><xsl:text>XM020400</xsl:text></subfield>
                 </datafield>
             </xsl:when>
             <xsl:when test="$type = 'bild'">
