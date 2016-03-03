@@ -133,6 +133,17 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and $collection = 'Duerrenmatt')"> <!-- Dokument: Bilder und Gemälde {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                        <xsl:choose>
+                            <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:call-template name="marcFields">
+                                    <xsl:with-param name="type" select="'bild'" />
+                                </xsl:call-template>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </xsl:when>
                     <xsl:when test="@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']">
                         <xsl:choose>
                             <xsl:when test="$collection = 'Schwarzenbach'">
