@@ -282,7 +282,7 @@
     <!-- MARC-Feld 000 -->
     <xsl:template name="createLeader">
         <xsl:param name="type" />
-         <leader>
+         <leader >
              <xsl:choose>
                  <xsl:when test="$type = 'foto' or $type = 'bild'"> 
                      <xsl:text>    nkm a22     4  4500</xsl:text>
@@ -1201,7 +1201,7 @@
         </datafield>
     </xsl:template>
     
-    <!-- Linking Marc-Feld: 490 / 777 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 499 -->
+    <!-- Linking Marc-Feld: 490 / 777 / 830 - UMSTELLUNG FÜR SWISSBIB VON 490 auf 779 -->
     <!-- ACHTUNG: Das Linking ist komplett an swissbib angepasst und entspricht nicht den Gepflogenheiten von MARC21 -->
     <xsl:template name="Linking">
         <xsl:variable name="parentLevel">
@@ -1260,6 +1260,12 @@
                             <subfield code="w"><xsl:text>(CHARCH)cha165130</xsl:text></subfield>
                             <subfield code="9"><xsl:text>cha165130</xsl:text></subfield>
                         </datafield>
+                        <datafield tag="787" ind1="0" ind2="8" >
+                            <subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></subfield>
+                            <subfield code="t"><xsl:text>Schwarzenbach, Annemarie: Inventar ihres Nachlasses im Schweizerischen Literaturarchiv (Bestand)</xsl:text></subfield>
+                            <subfield code="w"><xsl:text>(CHARCH)cha165130</xsl:text></subfield>
+                            <subfield code="9"><xsl:text>cha165130</xsl:text></subfield>
+                        </datafield>
                     </xsl:when>
                     <xsl:when test="$collection = 'Duerrenmatt'">
                         <datafield tag="499" ind1="1" ind2=" " >
@@ -1267,6 +1273,12 @@
                             <xsl:if test="$cdF490v !=''">
                                 <subfield code="v"><xsl:value-of select="$cdF490v"/></subfield>
                             </xsl:if>
+                            <subfield code="w"><xsl:text>(CHARCH)cha165042</xsl:text></subfield>
+                            <subfield code="9"><xsl:text>cha165042</xsl:text></subfield>
+                        </datafield>
+                        <datafield tag="787" ind1="0" ind2="8" >
+                            <subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></subfield>
+                            <subfield code="t"><xsl:text>Dürrenmatt, Friedrich: Nachlass Friedrich Dürrenmatt (Bestand)</xsl:text></subfield>
                             <subfield code="w"><xsl:text>(CHARCH)cha165042</xsl:text></subfield>
                             <subfield code="9"><xsl:text>cha165042</xsl:text></subfield>
                         </datafield>
@@ -1281,6 +1293,16 @@
                                 <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
                                 <subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
                             </xsl:if>
+                        </datafield>
+                        <datafield tag="787" ind1="0" ind2="8" >
+                            <subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></subfield>
+                            <subfield code="t"><xsl:value-of select="$cdF490a"/></subfield>
+                            <xsl:choose>
+                                <xsl:when test="$cdF830w != ''">
+                                    <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                                    <subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                                </xsl:when>
+                            </xsl:choose>
                         </datafield>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -1353,6 +1375,16 @@
                             </xsl:when>
                         </xsl:choose>
                     </datafield> -->
+                   <datafield tag="787" ind1="0" ind2="8" >
+                       <subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></subfield>
+                       <subfield code="t"><xsl:value-of select="$cdF490a"/></subfield>
+                       <xsl:choose>
+                           <xsl:when test="$cdF830w != ''">
+                               <subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                               <subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></subfield>
+                           </xsl:when>
+                       </xsl:choose>
+                   </datafield>
                 </xsl:if>
             </xsl:when>
         </xsl:choose>

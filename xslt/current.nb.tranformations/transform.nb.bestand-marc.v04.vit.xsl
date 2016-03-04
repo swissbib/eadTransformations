@@ -1261,6 +1261,12 @@
                             <marc:subfield code="w"><xsl:text>(CHARCH)cha165130</xsl:text></marc:subfield>
                             <marc:subfield code="9"><xsl:text>cha165130</xsl:text></marc:subfield>
                         </marc:datafield>
+                        <marc:datafield tag="787" ind1="0" ind2="8" >
+                            <marc:subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></marc:subfield>
+                            <marc:subfield code="t"><xsl:text>Schwarzenbach, Annemarie: Inventar ihres Nachlasses im Schweizerischen Literaturarchiv (Bestand)</xsl:text></marc:subfield>
+                            <marc:subfield code="w"><xsl:text>(CHARCH)cha165130</xsl:text></marc:subfield>
+                            <marc:subfield code="9"><xsl:text>cha165130</xsl:text></marc:subfield>
+                        </marc:datafield>
                     </xsl:when>
                     <xsl:when test="$collection = 'Duerrenmatt'">
                         <marc:datafield tag="499" ind1="1" ind2=" " >
@@ -1268,6 +1274,12 @@
                             <xsl:if test="$cdF490v !=''">
                                 <marc:subfield code="v"><xsl:value-of select="$cdF490v"/></marc:subfield>
                             </xsl:if>
+                            <marc:subfield code="w"><xsl:text>(CHARCH)cha165042</xsl:text></marc:subfield>
+                            <marc:subfield code="9"><xsl:text>cha165042</xsl:text></marc:subfield>
+                        </marc:datafield>
+                        <marc:datafield tag="787" ind1="0" ind2="8" >
+                            <marc:subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></marc:subfield>
+                            <marc:subfield code="t"><xsl:text>Dürrenmatt, Friedrich: Nachlass Friedrich Dürrenmatt (Bestand)</xsl:text></marc:subfield>
                             <marc:subfield code="w"><xsl:text>(CHARCH)cha165042</xsl:text></marc:subfield>
                             <marc:subfield code="9"><xsl:text>cha165042</xsl:text></marc:subfield>
                         </marc:datafield>
@@ -1282,6 +1294,16 @@
                                 <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
                                 <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
                             </xsl:if>
+                        </marc:datafield>
+                        <marc:datafield tag="787" ind1="0" ind2="8" >
+                            <marc:subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></marc:subfield>
+                            <marc:subfield code="t"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                            <xsl:choose>
+                                <xsl:when test="$cdF830w != ''">
+                                    <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                                    <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                                </xsl:when>
+                            </xsl:choose>
                         </marc:datafield>
                     </xsl:otherwise>
                 </xsl:choose>
@@ -1354,6 +1376,16 @@
                             </xsl:when>
                         </xsl:choose>
                     </marc:datafield> -->
+                   <marc:datafield tag="787" ind1="0" ind2="8" >
+                       <marc:subfield code="i"><xsl:text>Gehört zum Bestand</xsl:text></marc:subfield>
+                       <marc:subfield code="t"><xsl:value-of select="$cdF490a"/></marc:subfield>
+                       <xsl:choose>
+                           <xsl:when test="$cdF830w != ''">
+                               <marc:subfield code="w"><xsl:text>(CHARCH)cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                               <marc:subfield code="9"><xsl:text>cha</xsl:text><xsl:value-of select="$cdF830w"/></marc:subfield>
+                           </xsl:when>
+                       </xsl:choose>
+                   </marc:datafield>
                 </xsl:if>
             </xsl:when>
         </xsl:choose>
@@ -1952,7 +1984,7 @@
                 <marc:datafield tag="898" ind2=" " ind1=" " >
                     <marc:subfield code="a"><xsl:text>VM020453</xsl:text></marc:subfield>
                     <marc:subfield code="b"><xsl:text>XM020400</xsl:text></marc:subfield>
-                    <marc:subfield code="c"><xsl:text>XM020000</xsl:text></marc:subfield>
+                    <marc:subfield code="c"><xsl:text>XM020400</xsl:text></marc:subfield>
                 </marc:datafield>
             </xsl:when>
             <xsl:when test="$type = 'bild'">
