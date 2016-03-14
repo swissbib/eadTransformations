@@ -92,7 +92,7 @@
                 <!-- Additionally you can define arbitrary record ids that must not be transformed. 
                      Used to exclude records that define the structure of the collection. -->
                 <xsl:variable name="exclude">
-                    <xsl:variable name="excl" select="163520,575402,222373,578185,96770,575401,537228,163522,576303,163524,222299,222310,222328" />
+                    <xsl:variable name="excl" select="163520,163521,575402,222373,578185,96770,575401,537228,163522,576303,163524,222299,222310,222328" />
                     <xsl:variable name="rms">
                         <xsl:value-of select="$excl"/><xsl:text>,</xsl:text>
                     </xsl:variable>
@@ -108,7 +108,7 @@
                         </xsl:choose>
                     </xsl:for-each>
                 </xsl:variable>
-                <xsl:if test="@Level='Bestand'">
+                <xsl:if test="@Level='Bestand' and UsageData/AlwaysVisibleOnline/text() = 'true'">
                     <xsl:choose>
                         <xsl:when test="contains($exclude, 'NI')">
                         </xsl:when>
@@ -122,7 +122,7 @@
             </xsl:when>
             <xsl:when test="$level = 'ALL' or $level = 'DOK'">
                 <xsl:choose>
-                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'])"> <!-- Dokument: Bilder und Gemälde {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true')"> <!-- Dokument: Bilder und Gemälde -->
                         <xsl:choose>
                             <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
                             </xsl:when>
@@ -133,7 +133,7 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and $collection = 'Duerrenmatt')"> <!-- Dokument: Bilder und Gemälde {and UsageData/AlwaysVisibleOnline/text() = 'true'} -->
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Gemälde/Plan/Zeichnung/Grafik' and $collection = 'Duerrenmatt')"> <!-- Dokument: Bilder und Gemälde -->
                         <xsl:choose>
                             <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
                             </xsl:when>
@@ -144,7 +144,7 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild']">
+                    <xsl:when test="@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Fotografie' and DetailData/DataElement[@ElementName='Ansichtsbild'] and UsageData/AlwaysVisibleOnline/text() = 'true'">
                         <xsl:choose>
                             <xsl:when test="$collection = 'Schwarzenbach'">
                                 <xsl:if test="contains(DetailData/DataElement[@ElementName='FotografIn']/ElementValue[1]/TextValue/text(), 'Schwarzenbach')">
@@ -172,7 +172,7 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Publikation')"> <!-- Dokument: Dokumente allgemein -->
+                    <xsl:when test="(@Level='Dokument' and AdministrativeData/EditForm/text() = 'NB Publikation') and UsageData/AlwaysVisibleOnline/text() = 'true'"> <!-- Dokument: Dokumente allgemein -->
                         <xsl:choose>
                             <xsl:when test="fn:contains(lower-case(AdministrativeData/ViewingForm/text()), 'offline')">
                             </xsl:when>
@@ -183,21 +183,21 @@
                             </xsl:otherwise>
                         </xsl:choose>
                     </xsl:when>
-                    <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation'">
+                    <xsl:when test="(@Level='Sammlungseinheit' or @Level='Serie' or @Level='Dossier') and AdministrativeData/EditForm/text() = 'NB Publikation' and UsageData/AlwaysVisibleOnline/text() = 'true'">
                         <xsl:if test="$level = 'ALL'">
                             <xsl:call-template name="marcFields">
                                 <xsl:with-param name="type" select="'monographie'" />
                             </xsl:call-template>
                         </xsl:if>
                     </xsl:when>
-                    <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier'">
+                    <xsl:when test="@Level='Sammlungseinheit'or @Level='Serie' or @Level='Dossier' and UsageData/AlwaysVisibleOnline/text() = 'true'">
                         <xsl:if test="$level = 'ALL'">
                             <xsl:call-template name="marcFields">
                                 <xsl:with-param name="type" select="'dossier'" />
                             </xsl:call-template>
                         </xsl:if>
                     </xsl:when>
-                    <xsl:when test="@Level='Bestand'">
+                    <xsl:when test="@Level='Bestand' and UsageData/AlwaysVisibleOnline/text() = 'true'">
                         <xsl:if test="$level = 'ALL'">
                             <xsl:call-template name="marcFields">
                                 <xsl:with-param name="type" select="'collection'" />
@@ -1445,63 +1445,87 @@
     
     <!-- MARC-Feld 520 --> 
     <xsl:template match="DataElement[@ElementName='Kurzbeschreibung']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1="3" ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bemerkung zur Kurzbeschreibung']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1="3" ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Inhalt']">
-        <marc:datafield tag="520" ind1="3" ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1="3" ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Bestandsbeschreibung']">
-        <marc:datafield tag="520" ind1="2" ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1="2" ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Stichwort']">
-        <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1=" " ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <xsl:template match="DataElement[@ElementName='Darin']">
-        <marc:datafield tag="520" ind1=" " ind2=" ">
-            <marc:subfield code="a">
-                <xsl:for-each select="ElementValue/TextValue/text()">
-                    <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
-                </xsl:for-each>
-            </marc:subfield>
-        </marc:datafield>
+        <xsl:if test="not(ElementValue/TextValue/text() = 'xxx')">
+            <marc:datafield tag="520" ind1=" " ind2=" ">
+                <marc:subfield code="a">
+                    <xsl:for-each select="ElementValue/TextValue/text()">
+                        <xsl:if test="not(. = 'xxx')">
+                            <xsl:value-of select="." /><xsl:if test="not(position() = last())"><xsl:text>. </xsl:text></xsl:if>
+                        </xsl:if>
+                    </xsl:for-each>
+                </marc:subfield>
+            </marc:datafield>
+        </xsl:if>
     </xsl:template>
     
     <!-- MARC-Feld 542 -->
